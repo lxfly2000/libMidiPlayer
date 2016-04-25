@@ -9,6 +9,29 @@ A VERY easy-to-use library for midi files playing back in programs.
 * 支持 A——B 区段无缝循环。（这是制作该库的主要目的，因为网上现有的库大多都是用的 MCI，这种方式并不能实现 A——B 循环，即使能循环也都是有非常严重的卡顿的）
 * 可以自由控制播放与暂停。
 
+## 使用方法
+静态库编译好后，在你的项目中进行以下设置 (Visual Studio, 以下提到的路径均为 MIDIPlayer 的相对路径):
+* C/C++, 常规，附加包含目录：`MIDIPlayer`; `MIDIPlayer\midifile\include`
+* 链接器，常规，附加库目录：
+   * x86 Debug: `MIDIPlayer\lib_d`; `MIDIPlayer\midifile\lib_d`
+   * x86 Release: `MIDIPlayer\lib`; `MIDIPlayer\midifile\lib`
+   * x64 Debug: `MIDIPlayer\lib_x64_d`; `MIDIPlayer\midifile\lib_x64_d`
+   * x64 Release: `MIDIPlayer\lib_x64`; `MIDIPlayer\midifile\lib_x64`
+* 链接器，输入，附加依赖项：`MidiPlayer.lib`; `midifile.lib`; `WinMM.lib`
+
+然后在代码中引用 `MidiPlayer.h`, 定义一个 MidiPlayer 变量即可。
+```C++
+#include "MidiPlayer.h"
+int main()
+{
+   MidiPlayer player;
+   player.LoadFile("bgm.mid");
+   player.SetLoop(6680, 98842);
+   player.Play();
+   //……
+}
+```
+
 ## 测试程序
 本程序的 testmain.cpp 是测试用程序，编译好后打开它，可以在程序中选择播放文件并设置循环。
 
