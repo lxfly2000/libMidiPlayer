@@ -1,23 +1,24 @@
-#include"MidiPlayer.h"
+#include "MidiPlayer.h"
 #include <iostream>
-#pragma comment(lib,"winmm.lib")
 
-int main(int argc, char** argv)
+using namespace std;
+
+int main(int argc, char *argv[])
 {
 	MidiPlayer player;
-	std::string input;
+	string input;
 	bool sendlong = true;
 	float a = 0.0f, b = 0.0f;
 	do
 	{
-		std::cout << "0=ÍË³ö 1=ÊäÈëÎÄ¼þÃû 2=²¥·Å 3=ÔÝÍ£ 4=Í£Ö¹ 5=ÉèÖÃÑ­»· 6=ÊÍ·ÅÐòÁÐ "
-			"7=ÇÐ»»ÊÇ·ñ·¢ËÍ³¤ÏûÏ¢ 8=¼ì²éÊÇ·ñ²¥·ÅÖÐ£º";
-		std::cin >> input;
+		cout << "0=é€€å‡º 1=è¾“å…¥æ–‡ä»¶å 2=æ’­æ”¾ 3=æš‚åœ 4=åœæ­¢ 5=è®¾ç½®å¾ªçŽ¯ 6=é‡Šæ”¾åºåˆ— "
+			"7=åˆ‡æ¢æ˜¯å¦å‘é€é•¿æ¶ˆæ¯ 8=æ£€æŸ¥æ˜¯å¦æ’­æ”¾ä¸­ 9=ç»“æŸç‚¹ï¼š";
+		cin >> input;
 		switch (atoi(input.c_str()))
 		{
 		case 1:
 			getchar();
-			std::getline(std::cin, input);
+			getline(cin, input);
 			player.LoadFile(input.c_str());
 			break;
 		case 2:
@@ -30,7 +31,7 @@ int main(int argc, char** argv)
 			player.Stop();
 			break;
 		case 5:
-			std::cin >> a >> b;
+			cin >> a >> b;
 			player.SetLoop(a, b);
 			break;
 		case 6:
@@ -39,11 +40,14 @@ int main(int argc, char** argv)
 		case 7:
 			sendlong = !sendlong;
 			player.SetSendLongMsg(sendlong);
-			std::cout << "·¢ËÍ³¤ÏûÏ¢£º" << (sendlong ? "ON" : "OFF") << endl;
-			std::cout << "* µ±ÄãÌýµ½ÏµÍ³ÑÝ×àµÄÒô·ûÓÐÐ©Ææ¹ÖÊ±½¨Òé³¢ÊÔÐÞ¸Ä´ËÑ¡Ïî¡£\n";
+			cout << "å‘é€é•¿æ¶ˆæ¯ï¼š" << (sendlong ? "ON" : "OFF") << endl;
+			cout << "* å½“ä½ å¬åˆ°ç³»ç»Ÿæ¼”å¥çš„éŸ³ç¬¦æœ‰äº›å¥‡æ€ªæ—¶å»ºè®®å°è¯•ä¿®æ”¹æ­¤é€‰é¡¹ã€‚\n";
 			break;
 		case 8:
-			std::cout << (player.GetPlayStatus() ? "ÕýÔÚ²¥·Å¡£" : "Ã»ÓÐ²¥·Å¡£") << endl;
+			cout << (player.GetPlayStatus() ? "æ­£åœ¨æ’­æ”¾ã€‚" : "æ²¡æœ‰æ’­æ”¾ã€‚") << endl;
+			break;
+		case 9:
+			cout << player.GetLastEventTick() << endl;
 			break;
 		case 0:
 		default:break;
