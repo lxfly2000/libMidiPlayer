@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 			player.SetLoop(a, b);
 			break;
 		case 6:
+			player.Stop();
 			player.Unload();
 			break;
 		case 7:
