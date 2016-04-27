@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include"MidiFile.h"
 #include<Windows.h>
 
@@ -27,10 +27,13 @@ public:
 	void SetSendLongMsg(bool);
 	int GetLastEventTick();
 	int GetPlayStatus();
+	//获取按键按下的状态
+	bool GetKeyPressed(unsigned, unsigned);
 
 	void TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
 	void VarReset();
+	void SetKeyPressed(unsigned, unsigned, bool);
 	bool sendLongMsg;
 	unsigned volume;
 	float nextTick;
@@ -48,7 +51,10 @@ private:
 	BYTE *midiSysExMsg;
 	HMIDIOUT hMidiOut;
 	MIDIHDR header;
+	bool *keyPressed;
 
 	int deltaTime;
-	const int nMaxSysExMsg = 256;
+	const unsigned nMaxSysExMsg;
+	const unsigned nChannels;
+	const unsigned nKeys;
 };

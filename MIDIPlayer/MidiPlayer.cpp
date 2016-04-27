@@ -6,12 +6,14 @@ void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1
 	pmp->TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
 }
 
-MidiPlayer::MidiPlayer() :volume(100), sendLongMsg(true), timerID(0), deltaTime(10), midiSysExMsg(nullptr)
+MidiPlayer::MidiPlayer() :volume(100), sendLongMsg(true), timerID(0), deltaTime(10), midiSysExMsg(nullptr),
+nMaxSysExMsg(256), nChannels(16), nKeys(128)
 {
 	if (pmp)delete pmp;
 	pmp = this;
 	VarReset();
 	midiSysExMsg = new BYTE[nMaxSysExMsg]{ 0 };
+	keyPressed = new bool[nChannels*nKeys];
 	ZeroMemory(&header, sizeof(header));
 	header.lpData = (LPSTR)midiSysExMsg;
 	header.dwBufferLength = nMaxSysExMsg;
@@ -24,6 +26,7 @@ MidiPlayer::~MidiPlayer()
 	Stop();
 	Unload();
 	midiOutClose(hMidiOut);
+	delete[]keyPressed;
 	delete[]midiSysExMsg;
 	pmp = nullptr;
 }
@@ -39,6 +42,13 @@ void MidiPlayer::VarReset()
 	midiEvent = 0;
 	nLoopStartEvent = 0;
 	nPlayStatus = 0;
+	ZeroMemory(keyPressed, nChannels*nKeys*sizeof(*keyPressed));
+}
+
+void MidiPlayer::SetKeyPressed(unsigned channel, unsigned key, bool bPressed)
+{
+	if (channel < nChannels&&key < nKeys)
+		keyPressed[nKeys*channel + key] = bPressed;
 }
 
 bool MidiPlayer::LoadFile(const char *filename)
@@ -80,6 +90,7 @@ void MidiPlayer::Stop(bool bResetMidi)
 	Pause();
 	if (bResetMidi)midiOutReset(hMidiOut);
 	SetPos(0.0f);
+	ZeroMemory(keyPressed, nChannels*nKeys*sizeof(*keyPressed));
 }
 
 bool MidiPlayer::SetLoop(float posStart, float posEnd)
@@ -149,6 +160,11 @@ void MidiPlayer::TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR 
 		case 3:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x00FF0000;
 		case 2:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x0000FF00;
 		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;
+			switch (midiEvent & 0x000000F0)
+			{
+			case 0x00000090:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 16, true); break;
+			case 0x00000080:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 16, false); break;
+			}
 			midiOutShortMsg(hMidiOut, midiEvent);
 			break;
 		default:
@@ -181,4 +197,11 @@ int MidiPlayer::GetLastEventTick()
 int MidiPlayer::GetPlayStatus()
 {
 	return nPlayStatus;
+}
+
+bool MidiPlayer::GetKeyPressed(unsigned channel, unsigned key)
+{
+	if (channel >= nChannels || key >= nKeys)
+		return false;
+	return keyPressed[nKeys*channel + key];
 }
