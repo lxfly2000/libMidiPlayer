@@ -8,20 +8,22 @@ public:
 	MidiPlayer();
 	~MidiPlayer();
 	MidiPlayer(const MidiPlayer&) = delete;
-	//¼ÓÔØÎÄ¼ş£¬Èç¹ûÊ§°Ü·µ»Ø false£¬·ñÔòÎª true
+	//åŠ è½½æ–‡ä»¶ï¼Œå¦‚æœå¤±è´¥è¿”å› falseï¼Œå¦åˆ™ä¸º true
 	bool LoadFile(const char*);
 	void Unload();
-	//²ÎÊı£ºtrue ´Óµ±Ç°Î»ÖÃ¼ÌĞø£¬false ´ÓÍ·¿ªÊ¼
+	//å‚æ•°ï¼štrue ä»å½“å‰ä½ç½®ç»§ç»­ï¼Œfalse ä»å¤´å¼€å§‹
 	bool Play(bool = true);
 	void Pause();
 	void Stop(bool = true);
-	//²ÎÊı£ºÑ­»·¿ªÊ¼µã£¬Ñ­»·½áÊøµã£¨ÒÔ tick Îªµ¥Î»£©£¬¾ùÎª 0 ±íÊ¾²»Ñ­»·£»
-	//ÉèÖÃÖµ³¬¹ıĞòÁĞ·¶Î§»ò²»·ûºÏÂß¼­·µ»Ø false
+	//å‚æ•°ï¼šå¾ªç¯å¼€å§‹ç‚¹ï¼Œå¾ªç¯ç»“æŸç‚¹ï¼ˆä»¥ tick ä¸ºå•ä½ï¼‰ï¼Œå‡ä¸º 0 è¡¨ç¤ºä¸å¾ªç¯ï¼›
+	//è®¾ç½®å€¼è¶…è¿‡åºåˆ—èŒƒå›´æˆ–ä¸ç¬¦åˆé€»è¾‘è¿”å› false
 	bool SetLoop(float, float);
-	//¡¾×¢Òâ¡¿¸Ã¹¦ÄÜÄ¿Ç°ÎŞ·¨ÓÃÓÚ MIDI
-	//È¡Öµ·¶Î§£º[0, 100] %£¬´óÓÚ 100 µÄÊÓÎª 100
+	//è®¾ç½®å½“å‰çš„æ’­æ”¾ä½ç½®ï¼Œå•ä½ä¸º tick
+	bool SetPos(float);
+	//ã€æ³¨æ„ã€‘è¯¥åŠŸèƒ½ç›®å‰æ— æ³•ç”¨äº MIDI
+	//å–å€¼èŒƒå›´ï¼š[0, 100] %ï¼Œå¤§äº 100 çš„è§†ä¸º 100
 	void SetVolume(unsigned);
-	//ÉèÖÃÊÇ·ñ·¢ËÍ³¤ÏûÏ¢£¨SysEx, MetaMsg µÈ£©
+	//è®¾ç½®æ˜¯å¦å‘é€é•¿æ¶ˆæ¯ï¼ˆSysEx, MetaMsg ç­‰ï¼‰
 	void SetSendLongMsg(bool);
 	int GetLastEventTick();
 	int GetPlayStatus();
@@ -29,8 +31,6 @@ public:
 	void TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
 	void VarReset();
-	//ÉèÖÃµ±Ç°µÄ²¥·ÅÎ»ÖÃ
-	bool SetPos(float);
 	bool sendLongMsg;
 	unsigned volume;
 	float nextTick;
@@ -43,7 +43,7 @@ private:
 	size_t nMsgSize;
 	int midiEvent;
 	int nLoopStartEvent;
-	int nPlayStatus;//0=Í£Ö¹»òÔİÍ££¬1=²¥·Å
+	int nPlayStatus;//0=åœæ­¢æˆ–æš‚åœï¼Œ1=æ’­æ”¾
 	MidiFile midifile;
 	BYTE *midiSysExMsg;
 	HMIDIOUT hMidiOut;
