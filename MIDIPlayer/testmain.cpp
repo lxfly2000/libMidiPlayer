@@ -1,4 +1,4 @@
-#include "MidiPlayer.h"
+﻿#include "MidiPlayer.h"
 #include <iostream>
 
 using namespace std;
