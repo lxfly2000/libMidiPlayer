@@ -11,9 +11,9 @@ nMaxSysExMsg(256), nChannels(16), nKeys(128)
 {
 	if (pmp)delete pmp;
 	pmp = this;
-	VarReset();
 	midiSysExMsg = new BYTE[nMaxSysExMsg]{ 0 };
 	keyPressed = new bool[nChannels*nKeys];
+	VarReset();
 	ZeroMemory(&header, sizeof(header));
 	header.lpData = (LPSTR)midiSysExMsg;
 	header.dwBufferLength = nMaxSysExMsg;
@@ -42,7 +42,6 @@ void MidiPlayer::VarReset()
 	midiEvent = 0;
 	nLoopStartEvent = 0;
 	nPlayStatus = 0;
-	ZeroMemory(keyPressed, nChannels*nKeys*sizeof(*keyPressed));
 }
 
 void MidiPlayer::SetKeyPressed(unsigned channel, unsigned key, bool bPressed)
@@ -53,6 +52,7 @@ void MidiPlayer::SetKeyPressed(unsigned channel, unsigned key, bool bPressed)
 
 bool MidiPlayer::LoadFile(const char *filename)
 {
+	Stop();
 	Unload();
 	if (!midifile.read(filename))return false;
 	VarReset();
