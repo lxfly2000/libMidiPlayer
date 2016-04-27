@@ -162,8 +162,8 @@ void MidiPlayer::TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR 
 		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;
 			switch (midiEvent & 0x000000F0)
 			{
-			case 0x00000090:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 16, true); break;
-			case 0x00000080:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 16, false); break;
+			case 0x00000090:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) != 0); break;
+			case 0x00000080:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, false); break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
 			break;
