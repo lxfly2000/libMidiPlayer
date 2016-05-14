@@ -36,9 +36,7 @@ int main()
 本程序的 testmain.cpp 是测试用程序，编译好后打开它，可以在程序中选择播放文件并设置循环。
 
 ## 示例 MIDI:
-[東方紅魔郷ルーネイトエルフ.mid](http://pan.baidu.com/s/1c2BIp9m)
-
-循环起始点：6680，循环结束点：98842
+[http://pan.baidu.com/s/1c2BIp9m](http://pan.baidu.com/s/1c2BIp9m)
 
 ## 如果你不知道怎么编译库或者想直接使用
 请在上面的链接中下载 MIDIPlayer.7z, 里面有完整的 lib 和测试程序。
