@@ -1,6 +1,13 @@
 # libMidiPlayer
 A VERY easy-to-use library for midi files playing back in programs.
 
+# LICENSE
+You can use this library in any case with the following copyright information included in your products.
+```Text
+libMidiPlayer  Copyright (C) 2016 Gao Boyuan
+```
+Please notice that this library is provided with NO WARRANTY.
+
 # MIDIPlayer 说明
 这是一个非常易用的 MIDI 文件播放库，你可以用它在程序中作为 MIDI 的 BGM 播放器。
 
