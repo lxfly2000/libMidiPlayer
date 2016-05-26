@@ -18,12 +18,12 @@ Please notice that this library is provided with NO WARRANTY.
 
 ## 使用方法
 静态库编译好后，在你的项目中进行以下设置 (Visual Studio, 以下提到的路径均为 MIDIPlayer 的相对路径):
-* C/C++, 常规，附加包含目录：`MIDIPlayer`; `MIDIPlayer\midifile\include`
+* C/C++, 常规，附加包含目录：`libMidiPlayer`; `libMidiPlayer\midifile\include`
 * 链接器，常规，附加库目录：
-   * x86 Debug: `MIDIPlayer\lib_d`; `MIDIPlayer\midifile\lib_d`
-   * x86 Release: `MIDIPlayer\lib`; `MIDIPlayer\midifile\lib`
-   * x64 Debug: `MIDIPlayer\lib_x64_d`; `MIDIPlayer\midifile\lib_x64_d`
-   * x64 Release: `MIDIPlayer\lib_x64`; `MIDIPlayer\midifile\lib_x64`
+   * x86 Debug: `libMidiPlayer\lib_d`; `libMidiPlayer\midifile\lib_d`
+   * x86 Release: `libMidiPlayer\lib`; `libMidiPlayer\midifile\lib`
+   * x64 Debug: `libMidiPlayer\lib_x64_d`; `libMidiPlayer\midifile\lib_x64_d`
+   * x64 Release: `libMidiPlayer\lib_x64`; `libMidiPlayer\midifile\lib_x64`
 * 链接器，输入，附加依赖项：`MidiPlayer.lib`; `midifile.lib`; `WinMM.lib`
 
 然后在代码中引用 `MidiPlayer.h`, 定义一个 MidiPlayer 变量即可。
