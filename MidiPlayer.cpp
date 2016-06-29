@@ -157,14 +157,17 @@ void MidiPlayer::TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR 
 		switch (nMsgSize)
 		{
 		case 4:midiEvent |= *(int*)midifile[0][nEvent].data() & 0xFF000000;
-		case 3:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x00FF0000;//速度（强度，Velocity，0～127，0=音符关）
-			((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
-		case 2:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x0000FF00;//音符编号（0～127，C4音的值为十进制60）
-		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;//MIDI消息类型，MIDI通道
+		case 3:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x00FF0000;
+		case 2:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x0000FF00;
+		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;
 			switch (midiEvent & 0x000000F0)//获取MIDI消息类型
 			{
 			case 0x00000090://音符开
+				/*第一字节（0x000000##）：MIDI消息类型，MIDI通道
+				第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
+				第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
 				SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) != 0);
+				((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
 				break;
 			case 0x00000080://音符关
 				SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, false);
