@@ -4,7 +4,7 @@ A VERY easy-to-use library for midi files playing back in programs.
 # LICENSE
 You can use this library in any case with the following copyright information included in your products.
 ```Text
-libMidiPlayer  Copyright (C) 2016 Gao Boyuan
+libMidiPlayer  Copyright (C) 2016 lxfly2000
 ```
 Please notice that this library is provided with NO WARRANTY.
 
