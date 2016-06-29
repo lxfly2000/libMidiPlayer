@@ -2,6 +2,8 @@
 #include"MidiFile.h"
 #include<Windows.h>
 
+#define MIDIPLAYER_MAX_VOLUME 100u
+
 class MidiPlayer
 {
 public:

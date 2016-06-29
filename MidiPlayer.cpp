@@ -1,4 +1,4 @@
-#include "MidiPlayer.h"
+﻿#include "MidiPlayer.h"
 
 static MidiPlayer *pmp = nullptr;
 void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
@@ -6,8 +6,8 @@ void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1
 	pmp->TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
 }
 
-MidiPlayer::MidiPlayer() :volume(100), sendLongMsg(true), timerID(0), deltaTime(10), midiSysExMsg(nullptr),
-nMaxSysExMsg(256), nChannels(16), nKeys(128)
+MidiPlayer::MidiPlayer() :volume(MIDIPLAYER_MAX_VOLUME), sendLongMsg(true), timerID(0), deltaTime(10),
+midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128)
 {
 	if (pmp)delete pmp;
 	pmp = this;
@@ -116,7 +116,7 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd)
 
 void MidiPlayer::SetVolume(unsigned v)
 {
-	v > 100 ? volume = 100 : volume = v;
+	v > MIDIPLAYER_MAX_VOLUME ? volume = MIDIPLAYER_MAX_VOLUME : volume = v;
 }
 
 bool MidiPlayer::SetPos(float pos)
@@ -157,13 +157,18 @@ void MidiPlayer::TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR 
 		switch (nMsgSize)
 		{
 		case 4:midiEvent |= *(int*)midifile[0][nEvent].data() & 0xFF000000;
-		case 3:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x00FF0000;
-		case 2:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x0000FF00;
-		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;
-			switch (midiEvent & 0x000000F0)
+		case 3:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x00FF0000;//速度（强度，Velocity，0～127，0=音符关）
+			((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
+		case 2:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x0000FF00;//音符编号（0～127，C4音的值为十进制60）
+		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;//MIDI消息类型，MIDI通道
+			switch (midiEvent & 0x000000F0)//获取MIDI消息类型
 			{
-			case 0x00000090:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) != 0); break;
-			case 0x00000080:SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, false); break;
+			case 0x00000090://音符开
+				SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) != 0);
+				break;
+			case 0x00000080://音符关
+				SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, false);
+				break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
 			break;
