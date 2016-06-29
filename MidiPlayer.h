@@ -26,7 +26,6 @@ public:
 	bool SetLoop(float, float);
 	//设置当前的播放位置，单位为 tick
 	bool SetPos(float);
-	//【注意】该功能目前无法用于 MIDI
 	//取值范围：[0, 100] %，大于 100 的视为 100
 	void SetVolume(unsigned);
 	//设置是否发送长消息（SysEx, MetaMsg 等）
