@@ -10,10 +10,27 @@ int main(int argc, char *argv[])
 	HANDLE hConsole;
 	MidiPlayer player;
 	string input;
-	bool sendlong = true;
+	bool sendlong = false;
 	float a = 0.0f, b = 0.0f;
 	int status = 0;
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	
+	player.SetSendLongMsg(sendlong);
+	if(argc == 2)
+	{
+		if (argv[1][0] == '\"')
+		{
+			argv[1][strlen(argv[1]) - 1] = '\0';
+			player.LoadFile(argv[1] + 1);
+		}
+		else
+		{
+			player.LoadFile(argv[1]);
+		}
+		player.Play(true);
+		cout << "正在播放：" << (argv[1][0] == '\"' ? argv[1] + 1 : argv[1]) << endl;
+	}
+	
 	do
 	{
 		switch (status)
@@ -25,6 +42,7 @@ int main(int argc, char *argv[])
 			switch (input[0])
 			{
 			case '1':
+				cout << "文件名（相对或绝对路径，不要引号）：";
 				getchar();
 				getline(cin, input);
 				player.LoadFile(input.c_str());
