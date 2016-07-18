@@ -1,6 +1,7 @@
 ﻿#include "MidiPlayer.h"
 #include "E:\Codes\控制台光标控制.h"
 #include <iostream>
+#include<fstream>
 #include <conio.h>
 
 using namespace std;
@@ -45,7 +46,17 @@ int main(int argc, char *argv[])
 				cout << "文件名（相对或绝对路径，不要引号）：";
 				getchar();
 				getline(cin, input);
-				player.LoadFile(input.c_str());
+				if (player.LoadFile(input.c_str()))
+				{
+					ifstream loopfile(input + ".txt", ios::in);
+					if (loopfile)
+					{
+						loopfile >> a >> b;
+						player.SetLoop(a, b);
+						cout << "自动设置循环为：" << a << ", " << b << endl;
+					}
+					loopfile.close();
+				}
 				break;
 			case '2':
 				player.GetPlayStatus() ? player.Pause() : player.Play(true);
