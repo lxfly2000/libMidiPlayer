@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include"MidiFile.h"
 #include<Windows.h>
+#include<sstream>
 
 #define MIDIPLAYER_MAX_VOLUME 100u
 
@@ -13,6 +14,8 @@ public:
 	~MidiPlayer();
 	//加载文件，如果失败返回 false，否则为 true
 	bool LoadFile(const char*);
+	//加载内存流，失败返回 false, 成功返回 true
+	bool LoadStream(std::stringstream&);
 	//释放序列资源
 	void Unload();
 	//参数：true 从当前位置继续，false 从头开始
@@ -34,11 +37,11 @@ public:
 	int GetLastEventTick();
 	//获取播放状态，TRUE 为正在播放，FALSE 为没有播放
 	int GetPlayStatus();
-	//获取按键按下的状态
+	//获取按键按下的状态，参数为 Channel 号和 Key 号
 	bool GetKeyPressed(unsigned, unsigned);
 
 	//用于将回调函数操作导入类中，请不要调用此函数
-	void TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
+	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
 	void VarReset();
 	void SetKeyPressed(unsigned, unsigned, bool);

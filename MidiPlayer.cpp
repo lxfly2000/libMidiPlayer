@@ -3,7 +3,7 @@
 static MidiPlayer *pmp = nullptr;
 void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
-	pmp->TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
+	pmp->_TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
 }
 
 MidiPlayer::MidiPlayer() :volume(MIDIPLAYER_MAX_VOLUME), sendLongMsg(true), timerID(0), deltaTime(10),
@@ -59,6 +59,12 @@ bool MidiPlayer::LoadFile(const char *filename)
 	midifile.joinTracks();
 	nEventCount = midifile[0].size();
 	return true;
+}
+
+bool MidiPlayer::LoadStream(std::stringstream &mem)
+{
+	//read使用的是不带const的变量
+	return midifile.read(mem) == TRUE;
 }
 
 void MidiPlayer::Unload()
@@ -140,7 +146,7 @@ void MidiPlayer::SetSendLongMsg(bool bSend)
 	sendLongMsg = bSend;
 }
 
-void MidiPlayer::TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
+void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
 	nextTick += midifile.getTicksPerQuarterNote()*deltaTime*tempo / 60000;
 	if (loopEndTick > 0.0f&&nextTick >= loopEndTick)
