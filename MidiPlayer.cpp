@@ -1,4 +1,6 @@
 ﻿#include "MidiPlayer.h"
+#include <fstream>
+#include <sstream>
 
 static MidiPlayer *pmp = nullptr;
 void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
@@ -52,19 +54,24 @@ void MidiPlayer::SetKeyPressed(unsigned channel, unsigned key, bool bPressed)
 
 bool MidiPlayer::LoadFile(const char *filename)
 {
-	Stop();
-	Unload();
-	if (!midifile.read(filename))return false;
-	VarReset();
-	midifile.joinTracks();
-	nEventCount = midifile[0].size();
-	return true;
+	//http://blog.csdn.net/tulip527/article/details/7976471
+	std::ifstream file(filename, std::ios::in | std::ios::binary);
+	std::stringstream filemem;
+	if (!file)return false;
+	filemem << file.rdbuf();
+	return LoadStream(filemem);
 }
 
 bool MidiPlayer::LoadStream(std::stringstream &mem)
 {
+	Stop();
+	Unload();
 	//read使用的是不带const的变量
-	return midifile.read(mem) == TRUE;
+	if (!midifile.read(mem))return false;
+	VarReset();
+	midifile.joinTracks();
+	nEventCount = midifile[0].size();
+	return true;
 }
 
 void MidiPlayer::Unload()
