@@ -33,6 +33,10 @@ rd /s /q lib
 rd /s /q lib_d
 rd /s /q lib_x64
 rd /s /q lib_x64_d
+rd /s /q Debug
+rd /s /q Release
+rd /s /q x64_Debug
+rd /s /q x64_Release
 cd..
 rd /s /q Debug
 rd /s /q lib
