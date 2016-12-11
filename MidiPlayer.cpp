@@ -50,7 +50,12 @@ void MidiPlayer::VarReset()
 void MidiPlayer::SetKeyPressure(unsigned channel, unsigned key, unsigned char pressure)
 {
 	if (channel < nChannels&&key < nKeys)
-		keyPressure[nKeys*channel + key] = pressure;
+	{
+		key = nKeys*channel + key;
+		if (pressure&&!keyPressure[key])polyphone++;
+		else if (!pressure&&keyPressure[key])polyphone--;
+		keyPressure[key] = pressure;
+	}
 }
 
 bool MidiPlayer::LoadFile(const char *filename)
@@ -178,11 +183,9 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) >> 16);
 				((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
-				polyphone++;
 				break;
 			case 0x00000080://音符关
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
-				if (polyphone)polyphone--;
 				break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
