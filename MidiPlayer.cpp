@@ -44,6 +44,7 @@ void MidiPlayer::VarReset()
 	midiEvent = 0;
 	nLoopStartEvent = 0;
 	nPlayStatus = 0;
+	polyphone = 0;
 }
 
 void MidiPlayer::SetKeyPressure(unsigned channel, unsigned key, unsigned char pressure)
@@ -91,11 +92,12 @@ bool MidiPlayer::Play(bool goOn)
 
 void MidiPlayer::Pause()
 {
-	if (nPlayStatus == 1)
-		timeKillEvent(timerID);
+	if (nPlayStatus == 0)return;
+	nPlayStatus = 0;
+	timeKillEvent(timerID);
+	polyphone = 0;
 	for (int i = 0x00007BB0; i < 0x00007BBF; i += 0x00000001)
 		midiOutShortMsg(hMidiOut, i);
-	nPlayStatus = 0;
 }
 
 void MidiPlayer::Stop(bool bResetMidi)
@@ -110,9 +112,9 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd)
 {
 	if (posStart > posEnd)
 		return false;
-	if (loopEndTick > midifile[0][nEventCount - 1].tick)
+	if (posEnd > midifile[0][nEventCount - 1].tick)
 		return false;
-	if (loopStartTick < 0.0f)
+	if (posStart < 0.0f)
 		return false;
 	if (!midifile[0].size())
 		return false;
@@ -155,14 +157,8 @@ void MidiPlayer::SetSendLongMsg(bool bSend)
 
 void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
-	lastTick = nextTick;
 	nextTick += midifile.getTicksPerQuarterNote()*deltaTime*tempo / 60000;
-	if (loopEndTick&&lastTick >= loopEndTick)
-	{
-		nextTick = loopStartTick;
-		nEvent = nLoopStartEvent;
-	}
-	while (midifile[0][nEvent].tick <= nextTick)
+	if(nEvent < nEventCount)while (midifile[0][nEvent].tick <= nextTick)
 	{
 		nMsgSize = midifile[0][nEvent].size();
 		if (midifile[0][nEvent].isTempo())
@@ -182,9 +178,11 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) >> 16);
 				((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
+				polyphone++;
 				break;
 			case 0x00000080://音符关
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
+				polyphone--;
 				break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
@@ -201,12 +199,20 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			}
 			break;
 		}
-		if (nEvent >= nEventCount || midifile[0][nEvent].isEndOfTrack())
+		if (++nEvent >= nEventCount)break;
+	}
+	if (loopEndTick)
+	{
+		if (nextTick >= loopEndTick)
 		{
-			Stop(false);
-			return;
+			nextTick = loopStartTick;
+			nEvent = nLoopStartEvent;
 		}
-		nEvent++;
+	}
+	else if (nEvent >= nEventCount)
+	{
+		Stop(false);
+		return;
 	}
 }
 
@@ -226,4 +232,34 @@ unsigned char MidiPlayer::GetKeyPressure(unsigned channel, unsigned key)
 	if (channel >= nChannels || key >= nKeys)
 		return false;
 	return keyPressure[nKeys*channel + key];
+}
+
+int MidiPlayer::GetPosEventNum()
+{
+	return nEvent;
+}
+
+int MidiPlayer::GetPolyphone()
+{
+	return polyphone;
+}
+
+int MidiPlayer::GetQuarterNoteTicks()
+{
+	return midifile.getTicksPerQuarterNote();
+}
+
+float MidiPlayer::GetPosTick()
+{
+	return nextTick;
+}
+
+float MidiPlayer::GetBPM()
+{
+	return tempo;
+}
+
+double MidiPlayer::GetPosTimeInSeconds()
+{
+	return midifile.getTimeInSeconds((int)nextTick);
 }

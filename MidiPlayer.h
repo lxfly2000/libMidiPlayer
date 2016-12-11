@@ -39,6 +39,18 @@ public:
 	int GetPlayStatus();
 	//获取按键按下的力度，参数为 Channel 号和 Key 号
 	unsigned char GetKeyPressure(unsigned, unsigned);
+	//获取当前事件的位置
+	int GetPosEventNum();
+	//获取复音数
+	int GetPolyphone();
+	//获取四分音符所占的 ticks
+	int GetQuarterNoteTicks();
+	//获取当前的 tick
+	float GetPosTick();
+	//获取BPM
+	float GetBPM();
+	//获取时间
+	double GetPosTimeInSeconds();
 
 	//用于将回调函数操作导入类中，请不要调用此函数
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
@@ -47,7 +59,7 @@ private:
 	void SetKeyPressure(unsigned, unsigned, unsigned char);
 	bool sendLongMsg;
 	unsigned volume;
-	float nextTick, lastTick;
+	float nextTick;
 	float loopStartTick;
 	float loopEndTick;
 	float tempo;
@@ -63,6 +75,7 @@ private:
 	HMIDIOUT hMidiOut;
 	MIDIHDR header;
 	unsigned char *keyPressure;
+	int polyphone;
 
 	int deltaTime;
 	const unsigned nMaxSysExMsg;

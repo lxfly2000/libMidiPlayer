@@ -4,19 +4,38 @@
 #include <fstream>
 #include <conio.h>
 
-using namespace std;
+bool LoadMIDI(MidiPlayer* pplayer, std::string fp)
+{
+	if (!pplayer->LoadFile(fp.c_str()))
+		return false;
+	std::ifstream loopfile(fp + ".txt", std::ios::in);
+	if (loopfile)
+	{
+		float a, b;
+		loopfile >> a >> b;
+		pplayer->SetLoop(a, b);
+		std::cout << "自动设置循环为：" << a << "," << b << std::endl;
+	}
+	loopfile.close();
+	return true;
+}
 
 int main(int argc, char *argv[])
 {
 	HANDLE hConsole;
+	HWND hCwindow;
 	MidiPlayer player;
 	string input;
 	bool sendlong = false;
 	float a = 0.0f, b = 0.0f;
 	int status = 0;
-	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	int millisec = 0, minute = 0, second = 0, bar = 0, step = 0, tick = 0;
+	const int stepsperbar = 4;
+	TCHAR stbuffer[80];
 	DWORD cursorsize;
 	BOOL showcursor;
+	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	hCwindow = GetConsoleWindow();
 	
 	GetCursorSize(&cursorsize, &showcursor);
 	player.SetSendLongMsg(sendlong);
@@ -25,11 +44,11 @@ int main(int argc, char *argv[])
 		if (argv[1][0] == '\"')
 		{
 			argv[1][strlen(argv[1]) - 1] = '\0';
-			player.LoadFile(argv[1] + 1);
+			LoadMIDI(&player, argv[1] + 1);
 		}
 		else
 		{
-			player.LoadFile(argv[1]);
+			LoadMIDI(&player, argv[1]);
 		}
 		player.Play(true);
 		cout << "正在播放：" << (argv[1][0] == '\"' ? argv[1] + 1 : argv[1]) << endl;
@@ -49,17 +68,7 @@ int main(int argc, char *argv[])
 				cout << "文件名（相对或绝对路径，不要引号）：";
 				getchar();
 				getline(cin, input);
-				if (player.LoadFile(input.c_str()))
-				{
-					ifstream loopfile(input + ".txt", ios::in);
-					if (loopfile)
-					{
-						loopfile >> a >> b;
-						player.SetLoop(a, b);
-						cout << "自动设置循环为：" << a << ", " << b << endl;
-					}
-					loopfile.close();
-				}
+				LoadMIDI(&player, input);
 				break;
 			case '2':
 				player.GetPlayStatus() ? player.Pause() : player.Play(true);
@@ -109,6 +118,19 @@ int main(int argc, char *argv[])
 					cout << (player.GetKeyPressure(i, j) ? '#' : '.');
 				cout << endl;
 			}
+			millisec = (int)(player.GetPosTimeInSeconds()*1000.0);
+			second = millisec / 1000;
+			millisec %= 1000;
+			minute = second / 60;
+			second %= 60;
+			tick = (int)player.GetPosTick();
+			step = tick / player.GetQuarterNoteTicks();
+			tick %= player.GetQuarterNoteTicks();
+			bar = step / stepsperbar;
+			step %= stepsperbar;
+			swprintf_s(stbuffer, L"BPM:%5.3f 时间：%d:%02d.%03d Tick:%d:%01d:%02d 事件：%d 复音数：%d", player.GetBPM(),
+				minute, second, millisec, bar + 1, step + 1, tick, player.GetPosEventNum(), player.GetPolyphone());
+			SetWindowText(hCwindow, stbuffer);
 			if (_kbhit())
 			{
 				status = 0;
