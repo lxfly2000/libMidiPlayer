@@ -182,7 +182,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				break;
 			case 0x00000080://音符关
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
-				polyphone--;
+				if (polyphone)polyphone--;
 				break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
