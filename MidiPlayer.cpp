@@ -95,7 +95,6 @@ void MidiPlayer::Pause()
 	if (nPlayStatus == 0)return;
 	nPlayStatus = 0;
 	timeKillEvent(timerID);
-	polyphone = 0;
 	for (int i = 0x00007BB0; i < 0x00007BBF; i += 0x00000001)
 		midiOutShortMsg(hMidiOut, i);
 }
@@ -103,6 +102,7 @@ void MidiPlayer::Pause()
 void MidiPlayer::Stop(bool bResetMidi)
 {
 	Pause();
+	polyphone = 0;
 	if (bResetMidi)midiOutReset(hMidiOut);
 	SetPos(0.0f);
 	ZeroMemory(keyPressure, nChannels*nKeys*sizeof(*keyPressure));

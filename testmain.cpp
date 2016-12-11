@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 			tick %= player.GetQuarterNoteTicks();
 			bar = step / stepsperbar;
 			step %= stepsperbar;
-			swprintf_s(stbuffer, L"BPM:%5.3f 时间：%d:%02d.%03d Tick:%d:%01d:%02d 事件：%d 复音数：%d", player.GetBPM(),
+			swprintf_s(stbuffer, L"BPM:%5.3f 时间：%d:%02d.%03d Tick:%d:%02d:%03d 事件：%d 复音数：%d", player.GetBPM(),
 				minute, second, millisec, bar + 1, step + 1, tick, player.GetPosEventNum(), player.GetPolyphone());
 			SetWindowText(hCwindow, stbuffer);
 			if (_kbhit())
