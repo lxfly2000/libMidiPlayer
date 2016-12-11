@@ -1,3 +1,5 @@
+因为我做的另一个程序中需要用静态库，所以就做了这个静态版本的 libMidiPlayer.
+---
 # libMidiPlayer
 A VERY easy-to-use library for midi files playing back in programs.
 

@@ -16,9 +16,6 @@ title 编译 %_ProjectName_%···
 "%_MSBuild_%" %_ProjectName_% /p:Configuration=Debug;Platform=x64
 "%_MSBuild_%" %_ProjectName_% /p:Configuration=Release;Platform=x86
 "%_MSBuild_%" %_ProjectName_% /p:Configuration=Release;Platform=x64
-set _ProjectName_=TestMidiPlayer.vcxproj
-title 编译 %_ProjectName_%···
-"%_MSBuild_%" %_ProjectName_% /p:Configuration=Release;Platform=x64
 title 已完成，请检查窗口中的输出结果。
 goto End
 :_NO_MSBuild_
