@@ -37,17 +37,17 @@ public:
 	int GetLastEventTick();
 	//获取播放状态，TRUE 为正在播放，FALSE 为没有播放
 	int GetPlayStatus();
-	//获取按键按下的状态，参数为 Channel 号和 Key 号
-	bool GetKeyPressed(unsigned, unsigned);
+	//获取按键按下的力度，参数为 Channel 号和 Key 号
+	unsigned char GetKeyPressure(unsigned, unsigned);
 
 	//用于将回调函数操作导入类中，请不要调用此函数
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
 	void VarReset();
-	void SetKeyPressed(unsigned, unsigned, bool);
+	void SetKeyPressure(unsigned, unsigned, unsigned char);
 	bool sendLongMsg;
 	unsigned volume;
-	float nextTick;
+	float nextTick, lastTick;
 	float loopStartTick;
 	float loopEndTick;
 	float tempo;
@@ -62,7 +62,7 @@ private:
 	BYTE *midiSysExMsg;
 	HMIDIOUT hMidiOut;
 	MIDIHDR header;
-	bool *keyPressed;
+	unsigned char *keyPressure;
 
 	int deltaTime;
 	const unsigned nMaxSysExMsg;

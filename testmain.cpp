@@ -1,7 +1,7 @@
 ﻿#include "MidiPlayer.h"
-#include "E:\Codes\控制台光标控制.h"
+#include "Codes\ConsoleCursor.h"
 #include <iostream>
-#include<fstream>
+#include <fstream>
 #include <conio.h>
 
 using namespace std;
@@ -15,7 +15,10 @@ int main(int argc, char *argv[])
 	float a = 0.0f, b = 0.0f;
 	int status = 0;
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD cursorsize;
+	BOOL showcursor;
 	
+	GetCursorSize(&cursorsize, &showcursor);
 	player.SetSendLongMsg(sendlong);
 	if(argc == 2)
 	{
@@ -94,6 +97,7 @@ int main(int argc, char *argv[])
 				ClearScreen(hConsole);
 				cout << "按任意键退出键位状态。" << endl;
 				status = 1;
+				SetCursorSize(cursorsize, FALSE);
 			default:break;
 			}
 			break;
@@ -102,10 +106,14 @@ int main(int argc, char *argv[])
 			for (int i = 0; i < 16; i++)
 			{
 				for (int j = 0; j < 108; j++)//108是为了避免在控制台中输出时换行
-					cout << (player.GetKeyPressed(i, j) ? "#" : ".");
+					cout << (player.GetKeyPressure(i, j) ? '#' : '.');
 				cout << endl;
 			}
-			if (_kbhit())status = 0;
+			if (_kbhit())
+			{
+				status = 0;
+				SetCursorSize(cursorsize, TRUE);
+			}
 			break;
 		}
 	} while (input != "0");

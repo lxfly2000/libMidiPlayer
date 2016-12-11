@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-static MidiPlayer *pmp = nullptr;
+MidiPlayer *pmp = nullptr;
 void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
 	pmp->_TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
@@ -14,7 +14,7 @@ midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128)
 	if (pmp)delete pmp;
 	pmp = this;
 	midiSysExMsg = new BYTE[nMaxSysExMsg]{ 0 };
-	keyPressed = new bool[nChannels*nKeys];
+	keyPressure = new unsigned char[nChannels*nKeys];
 	VarReset();
 	ZeroMemory(&header, sizeof(header));
 	header.lpData = (LPSTR)midiSysExMsg;
@@ -28,7 +28,7 @@ MidiPlayer::~MidiPlayer()
 	Stop();
 	Unload();
 	midiOutClose(hMidiOut);
-	delete[]keyPressed;
+	delete[]keyPressure;
 	delete[]midiSysExMsg;
 	pmp = nullptr;
 }
@@ -46,10 +46,10 @@ void MidiPlayer::VarReset()
 	nPlayStatus = 0;
 }
 
-void MidiPlayer::SetKeyPressed(unsigned channel, unsigned key, bool bPressed)
+void MidiPlayer::SetKeyPressure(unsigned channel, unsigned key, unsigned char pressure)
 {
 	if (channel < nChannels&&key < nKeys)
-		keyPressed[nKeys*channel + key] = bPressed;
+		keyPressure[nKeys*channel + key] = pressure;
 }
 
 bool MidiPlayer::LoadFile(const char *filename)
@@ -103,7 +103,7 @@ void MidiPlayer::Stop(bool bResetMidi)
 	Pause();
 	if (bResetMidi)midiOutReset(hMidiOut);
 	SetPos(0.0f);
-	ZeroMemory(keyPressed, nChannels*nKeys*sizeof(*keyPressed));
+	ZeroMemory(keyPressure, nChannels*nKeys*sizeof(*keyPressure));
 }
 
 bool MidiPlayer::SetLoop(float posStart, float posEnd)
@@ -155,8 +155,9 @@ void MidiPlayer::SetSendLongMsg(bool bSend)
 
 void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
+	lastTick = nextTick;
 	nextTick += midifile.getTicksPerQuarterNote()*deltaTime*tempo / 60000;
-	if (loopEndTick > 0.0f&&nextTick >= loopEndTick)
+	if (loopEndTick&&lastTick >= loopEndTick)
 	{
 		nextTick = loopStartTick;
 		nEvent = nLoopStartEvent;
@@ -179,11 +180,11 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				/*第一字节（0x000000##）：MIDI消息类型，MIDI通道
 				第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
 				第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
-				SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) != 0);
+				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) >> 16);
 				((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
 				break;
 			case 0x00000080://音符关
-				SetKeyPressed(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, false);
+				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
 				break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
@@ -220,9 +221,9 @@ int MidiPlayer::GetPlayStatus()
 	return nPlayStatus;
 }
 
-bool MidiPlayer::GetKeyPressed(unsigned channel, unsigned key)
+unsigned char MidiPlayer::GetKeyPressure(unsigned channel, unsigned key)
 {
 	if (channel >= nChannels || key >= nKeys)
 		return false;
-	return keyPressed[nKeys*channel + key];
+	return keyPressure[nKeys*channel + key];
 }
