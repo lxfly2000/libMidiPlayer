@@ -314,3 +314,8 @@ void MidiPlayer::SetChannelPitchBendRange(unsigned channel, unsigned char range)
 {
 	channelPitchSensitivity[channel] = range;
 }
+
+int MidiPlayer::GetEventCount()
+{
+	return nEventCount;
+}
