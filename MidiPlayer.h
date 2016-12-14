@@ -50,7 +50,6 @@ public:
 	//获取按键按下的力度，参数为 Channel 号和 Key 号
 	unsigned char GetKeyPressure(unsigned, unsigned);
 	//获取按键的弯音半音数，参数为 Channel 号
-	//【注意】实测是预期数的2倍，暂无确定信息
 	float GetChannelPitchBend(unsigned);
 	//获取当前事件的位置
 	int GetPosEventNum();
