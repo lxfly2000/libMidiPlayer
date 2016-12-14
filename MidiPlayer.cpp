@@ -2,6 +2,8 @@
 #include <fstream>
 #include <sstream>
 
+#define INIT_ARRAY(pointer,n,var) for(size_t i=0;i<(n);i++)(pointer)[i]=(var)
+
 MidiPlayer *pmp = nullptr;
 void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
@@ -13,10 +15,14 @@ midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,2
 {
 	if (pmp)delete pmp;
 	pmp = this;
-	midiSysExMsg = new BYTE[nMaxSysExMsg]{ 0 };
+	midiSysExMsg = new BYTE[nMaxSysExMsg];
+	INIT_ARRAY(midiSysExMsg, nMaxSysExMsg, 0);
 	keyPressure = new unsigned char[nChannels*nKeys];
+	INIT_ARRAY(keyPressure, nChannels*nKeys, 0);
 	channelPitchBend = new unsigned short[nChannels];
+	INIT_ARRAY(channelPitchBend, nChannels, 0x2000);
 	channelPitchSensitivity = new unsigned char[nChannels];
+	INIT_ARRAY(channelPitchSensitivity, nChannels, 2);
 	VarReset();
 	ZeroMemory(&header, sizeof(header));
 	header.lpData = (LPSTR)midiSysExMsg;
@@ -192,7 +198,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
 				break;
 			case 0x000000E0://弯音
-				SetChannelPitchBendFromRaw(midiEvent & 0x0000000F, (midiEvent & 0x00FFFF00) >> 16);
+				SetChannelPitchBendFromRaw(midiEvent & 0x0000000F, (midiEvent & 0x00FFFF00) >> 8);
 				break;
 			case 0x000000B0://CC控制器
 				switch (midiEvent & 0x0000FF00)
@@ -294,10 +300,9 @@ double MidiPlayer::GetPosTimeInSeconds()
 void MidiPlayer::SetChannelPitchBendFromRaw(unsigned channel, unsigned short pitch)
 {
 	channelPitchBend[channel] = 0;
-	channelPitchBend[channel] = pitch & 0x00FF;
-	channelPitchBend[channel] <<= 7;
-	pitch >>= 8;
-	channelPitchBend[channel] |= pitch;
+	channelPitchBend[channel] = pitch & 0x7F00;
+	channelPitchBend[channel] >>= 1;
+	channelPitchBend[channel] |= pitch & 0x007F;
 }
 
 float MidiPlayer::GetChannelPitchBend(unsigned channel)
