@@ -63,7 +63,7 @@ public:
 	float GetBPM();
 	//获取时间
 	double GetPosTimeInSeconds();
-	//获取事件冲断
+	//获取事件总数
 	int GetEventCount();
 
 	//用于将回调函数操作导入类中，请不要调用此函数
