@@ -16,13 +16,9 @@ midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,2
 	if (pmp)delete pmp;
 	pmp = this;
 	midiSysExMsg = new BYTE[nMaxSysExMsg];
-	INIT_ARRAY(midiSysExMsg, nMaxSysExMsg, 0);
 	keyPressure = new unsigned char[nChannels*nKeys];
-	INIT_ARRAY(keyPressure, nChannels*nKeys, 0);
 	channelPitchBend = new unsigned short[nChannels];
-	INIT_ARRAY(channelPitchBend, nChannels, 0x2000);
 	channelPitchSensitivity = new unsigned char[nChannels];
-	INIT_ARRAY(channelPitchSensitivity, nChannels, 2);
 	VarReset();
 	ZeroMemory(&header, sizeof(header));
 	header.lpData = (LPSTR)midiSysExMsg;
@@ -55,6 +51,7 @@ void MidiPlayer::VarReset()
 	nLoopStartEvent = 0;
 	nPlayStatus = 0;
 	polyphone = 0;
+	Stop();
 }
 
 void MidiPlayer::SetKeyPressure(unsigned channel, unsigned key, unsigned char pressure)
@@ -121,6 +118,8 @@ void MidiPlayer::Stop(bool bResetMidi)
 	if (bResetMidi)midiOutReset(hMidiOut);
 	SetPos(0.0f);
 	ZeroMemory(keyPressure, nChannels*nKeys*sizeof(*keyPressure));
+	INIT_ARRAY(channelPitchBend, nChannels, 0x2000);
+	INIT_ARRAY(channelPitchSensitivity, nChannels, 2);
 }
 
 bool MidiPlayer::SetLoop(float posStart, float posEnd)
