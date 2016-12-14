@@ -5,6 +5,16 @@
 
 #define MIDIPLAYER_MAX_VOLUME 100u
 
+union RPNType
+{
+	struct RPNDivided
+	{
+		unsigned char lsb;
+		unsigned char msb;
+	}rpndivided;
+	unsigned short rpnvalue;
+};
+
 class MidiPlayer
 {
 public:
@@ -39,6 +49,9 @@ public:
 	int GetPlayStatus();
 	//获取按键按下的力度，参数为 Channel 号和 Key 号
 	unsigned char GetKeyPressure(unsigned, unsigned);
+	//获取按键的弯音半音数，参数为 Channel 号
+	//【注意】实测是预期数的2倍，暂无确定信息
+	float GetChannelPitchBend(unsigned);
 	//获取当前事件的位置
 	int GetPosEventNum();
 	//获取复音数
@@ -57,6 +70,8 @@ public:
 private:
 	void VarReset();
 	void SetKeyPressure(unsigned, unsigned, unsigned char);
+	void SetChannelPitchBendFromRaw(unsigned, unsigned short);
+	void SetChannelPitchBendRange(unsigned, unsigned char);
 	bool sendLongMsg;
 	unsigned volume;
 	float nextTick;
@@ -75,9 +90,12 @@ private:
 	HMIDIOUT hMidiOut;
 	MIDIHDR header;
 	unsigned char *keyPressure;
+	unsigned short *channelPitchBend;//0x0000-0x2000-0x3FFF(-8192 - 0 - +8191)
+	unsigned char *channelPitchSensitivity;//弯音幅度，半音数，0x00-0x18（0到24个半音）
 	int polyphone;
 
 	int deltaTime;
+	RPNType rpn;
 	const unsigned nMaxSysExMsg;
 	const unsigned nChannels;
 	const unsigned nKeys;

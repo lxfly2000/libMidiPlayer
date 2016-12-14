@@ -9,12 +9,14 @@ void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1
 }
 
 MidiPlayer::MidiPlayer() :volume(MIDIPLAYER_MAX_VOLUME), sendLongMsg(true), timerID(0), deltaTime(10),
-midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128)
+midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 })
 {
 	if (pmp)delete pmp;
 	pmp = this;
 	midiSysExMsg = new BYTE[nMaxSysExMsg]{ 0 };
 	keyPressure = new unsigned char[nChannels*nKeys];
+	channelPitchBend = new unsigned short[nChannels];
+	channelPitchSensitivity = new unsigned char[nChannels];
 	VarReset();
 	ZeroMemory(&header, sizeof(header));
 	header.lpData = (LPSTR)midiSysExMsg;
@@ -28,6 +30,8 @@ MidiPlayer::~MidiPlayer()
 	Stop();
 	Unload();
 	midiOutClose(hMidiOut);
+	delete[]channelPitchSensitivity;
+	delete[]channelPitchBend;
 	delete[]keyPressure;
 	delete[]midiSysExMsg;
 	pmp = nullptr;
@@ -187,6 +191,28 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			case 0x00000080://音符关
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
 				break;
+			case 0x000000E0://弯音
+				SetChannelPitchBendFromRaw(midiEvent & 0x0000000F, (midiEvent & 0x00FFFF00) >> 16);
+				break;
+			case 0x000000B0://CC控制器
+				switch (midiEvent & 0x0000FF00)
+				{
+				case 0x00006500://设置RPN的高位
+					rpn.rpndivided.msb = (midiEvent & 0x00FF0000) >> 16;
+					break;
+				case 0x00006400://设置RPN的低位
+					rpn.rpndivided.lsb = (midiEvent & 0x00FF0000) >> 16;
+					break;
+				case 0x00000600://向RPN表示的参数高位写入数据
+					if (rpn.rpndivided.msb == 0)//判断RPN高位是不是表示弯音参数
+						SetChannelPitchBendRange(midiEvent & 0x0000000F, (midiEvent & 0x00FF0000) >> 16);
+					break;
+				/*case 0x00002600://向RPN表示的参数低位写入数据
+					if (rpn.rpndivided.lsb == 0)//判断RPN低位是不是表示弯音参数
+						SetChannelPitchBendRange(midiEvent & 0x0000000F, (midiEvent & 0x00FF0000) >> 24);//因为弯音只用了高位字节所以就不用管低位了。
+					break;*/
+				}
+				break;
 			}
 			midiOutShortMsg(hMidiOut, midiEvent);
 			break;
@@ -232,8 +258,6 @@ int MidiPlayer::GetPlayStatus()
 
 unsigned char MidiPlayer::GetKeyPressure(unsigned channel, unsigned key)
 {
-	if (channel >= nChannels || key >= nKeys)
-		return false;
 	return keyPressure[nKeys*channel + key];
 }
 
@@ -265,4 +289,23 @@ float MidiPlayer::GetBPM()
 double MidiPlayer::GetPosTimeInSeconds()
 {
 	return midifile.getTimeInSeconds((int)nextTick);
+}
+
+void MidiPlayer::SetChannelPitchBendFromRaw(unsigned channel, unsigned short pitch)
+{
+	channelPitchBend[channel] = 0;
+	channelPitchBend[channel] = pitch & 0x00FF;
+	channelPitchBend[channel] <<= 7;
+	pitch >>= 8;
+	channelPitchBend[channel] |= pitch;
+}
+
+float MidiPlayer::GetChannelPitchBend(unsigned channel)
+{
+	return channelPitchSensitivity[channel] * ((float)channelPitchBend[channel] - 8192) / 8192;
+}
+
+void MidiPlayer::SetChannelPitchBendRange(unsigned channel, unsigned char range)
+{
+	channelPitchSensitivity[channel] = range;
 }
