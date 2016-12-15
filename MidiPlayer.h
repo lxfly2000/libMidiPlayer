@@ -82,7 +82,7 @@ private:
 	int timerID;
 	int nEvent;
 	int nEventCount;
-	size_t nMsgSize;
+	int nMsgSize;
 	int midiEvent;
 	int nLoopStartEvent;
 	int nPlayStatus;//0=停止或暂停，1=播放
