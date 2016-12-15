@@ -20,9 +20,8 @@ midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,2
 	channelPitchBend = new unsigned short[nChannels];
 	channelPitchSensitivity = new unsigned char[nChannels];
 	VarReset();
-	ZeroMemory(&header, sizeof(header));
+	ZeroMemory(&header, sizeof header);
 	header.lpData = (LPSTR)midiSysExMsg;
-	header.dwBufferLength = nMaxSysExMsg;
 	header.dwFlags = 0;
 	midiOutOpen(&hMidiOut, MIDI_MAPPER, 0, 0, 0);
 }
@@ -174,7 +173,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 	nextTick += midifile.getTicksPerQuarterNote()*deltaTime*tempo / 60000;
 	if(nEvent < nEventCount)while (midifile[0][nEvent].tick <= nextTick)
 	{
-		nMsgSize = midifile[0][nEvent].size();
+		nMsgSize = (int)midifile[0][nEvent].size();
 		if (midifile[0][nEvent].isTempo())
 			tempo = (float)midifile[0][nEvent].getTempoBPM();
 		midiEvent = 0;
@@ -224,9 +223,9 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 		default:
 			if (sendLongMsg)
 			{
-				ZeroMemory(midiSysExMsg, sizeof(midiSysExMsg));
-				for (size_t i = 0; i < nMsgSize; i++)
-					midiSysExMsg[i] = midifile[0][nEvent].at(i);
+				for (int i = 0; i < nMsgSize; i++)
+					midiSysExMsg[i] = midifile[0][nEvent][i];
+				header.dwBufferLength = nMsgSize;
 				midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
 				midiOutLongMsg(hMidiOut, &header, sizeof(header));
 				midiOutUnprepareHeader(hMidiOut, &header, sizeof(header));
