@@ -297,7 +297,6 @@ double MidiPlayer::GetPosTimeInSeconds()
 
 void MidiPlayer::SetChannelPitchBendFromRaw(unsigned channel, unsigned short pitch)
 {
-	channelPitchBend[channel] = 0;
 	channelPitchBend[channel] = pitch & 0x7F00;
 	channelPitchBend[channel] >>= 1;
 	channelPitchBend[channel] |= pitch & 0x007F;
