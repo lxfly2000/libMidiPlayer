@@ -11,7 +11,8 @@ void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1
 }
 
 MidiPlayer::MidiPlayer() :volume(MIDIPLAYER_MAX_VOLUME), sendLongMsg(true), timerID(0), deltaTime(10),
-midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 })
+midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
+pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr)
 {
 	if (pmp)delete pmp;
 	pmp = this;
@@ -38,7 +39,7 @@ MidiPlayer::~MidiPlayer()
 	pmp = nullptr;
 }
 
-void MidiPlayer::VarReset()
+void MidiPlayer::VarReset(bool doStop)
 {
 	loopStartTick = loopEndTick = 0.0f;
 	tempo = 120.0f;
@@ -50,7 +51,7 @@ void MidiPlayer::VarReset()
 	nLoopStartEvent = 0;
 	nPlayStatus = 0;
 	polyphone = 0;
-	Stop();
+	if (doStop)Stop();
 }
 
 void MidiPlayer::SetKeyPressure(unsigned channel, unsigned key, unsigned char pressure)
@@ -80,7 +81,7 @@ bool MidiPlayer::LoadStream(std::stringstream &mem)
 	Unload();
 	//read使用的是不带const的变量
 	if (!midifile.read(mem))return false;
-	VarReset();
+	VarReset(false);
 	midifile.joinTracks();
 	nEventCount = midifile[0].size();
 	return true;
@@ -245,6 +246,8 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 	else if (nEvent >= nEventCount)
 	{
 		Stop(false);
+		if (pFuncOnFinishPlay)
+			pFuncOnFinishPlay(paramOnFinishPlay);
 		return;
 	}
 }
@@ -315,4 +318,10 @@ void MidiPlayer::SetChannelPitchBendRange(unsigned channel, unsigned char range)
 int MidiPlayer::GetEventCount()
 {
 	return nEventCount;
+}
+
+void MidiPlayer::SetOnFinishPlay(void(*func)(void*), void* param)
+{
+	pFuncOnFinishPlay = func;
+	paramOnFinishPlay = param;
 }
