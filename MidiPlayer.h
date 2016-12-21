@@ -67,8 +67,8 @@ public:
 	int GetEventCount();
 	//设置播放完成后的回调函数，参数为函数指针和参数指针
 	void SetOnFinishPlay(void(*func)(void*), void*);
-
-	//用于将回调函数操作导入类中，请不要调用此函数
+protected:
+	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
 	void VarReset(bool = true);

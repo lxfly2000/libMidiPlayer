@@ -4,18 +4,14 @@
 
 #define INIT_ARRAY(pointer,n,var) for(size_t i=0;i<(n);i++)(pointer)[i]=(var)
 
-MidiPlayer *pmp = nullptr;
-void WINAPI OnTimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
-{
-	pmp->_TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
-}
+MidiPlayer* MidiPlayer::_pObj = nullptr;
 
 MidiPlayer::MidiPlayer() :volume(MIDIPLAYER_MAX_VOLUME), sendLongMsg(true), timerID(0), deltaTime(10),
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
 pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr)
 {
-	if (pmp)delete pmp;
-	pmp = this;
+	if (MidiPlayer::_pObj)delete MidiPlayer::_pObj;
+	MidiPlayer::_pObj = this;
 	midiSysExMsg = new BYTE[nMaxSysExMsg];
 	keyPressure = new unsigned char[nChannels*nKeys];
 	channelPitchBend = new unsigned short[nChannels];
@@ -36,7 +32,7 @@ MidiPlayer::~MidiPlayer()
 	delete[]channelPitchBend;
 	delete[]keyPressure;
 	delete[]midiSysExMsg;
-	pmp = nullptr;
+	MidiPlayer::_pObj = nullptr;
 }
 
 void MidiPlayer::VarReset(bool doStop)
@@ -97,7 +93,10 @@ bool MidiPlayer::Play(bool goOn)
 	if (nPlayStatus == 1)return true;
 	if (!midifile[0].size())return false;
 	if (!goOn)Stop();
-	timerID = timeSetEvent(deltaTime, 1, OnTimerFunc, 1, TIME_PERIODIC);
+	timerID = timeSetEvent(deltaTime, 1, [](UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
+	{
+		MidiPlayer::_pObj->_TimerFunc(wTimerID, msg, dwUser, dw1, dw2);
+	}, 1, TIME_PERIODIC);
 	nPlayStatus = 1;
 	return true;
 }
