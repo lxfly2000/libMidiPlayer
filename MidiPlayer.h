@@ -18,8 +18,8 @@ union RPNType
 class MidiPlayer
 {
 public:
-	//创建一个 MidiPlayer 类型的对象
-	MidiPlayer();
+	//创建一个 MidiPlayer 类型的对象，参数为 MIDI 设备序号（从0算起），默认值为 MIDI_MAPPER
+	MidiPlayer(unsigned = MIDI_MAPPER);
 	//释放对象
 	~MidiPlayer();
 	//加载文件，如果失败返回 false，否则为 true
@@ -78,7 +78,6 @@ private:
 	void(*pFuncOnFinishPlay)(void*);
 	void* paramOnFinishPlay;
 	bool sendLongMsg;
-	unsigned volume;
 	float nextTick;
 	float loopStartTick;
 	float loopEndTick;

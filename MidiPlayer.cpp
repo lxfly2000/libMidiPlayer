@@ -6,7 +6,7 @@
 
 MidiPlayer* MidiPlayer::_pObj = nullptr;
 
-MidiPlayer::MidiPlayer() :volume(MIDIPLAYER_MAX_VOLUME), sendLongMsg(true), timerID(0), deltaTime(10),
+MidiPlayer::MidiPlayer(unsigned deviceID) :sendLongMsg(true), timerID(0), deltaTime(10),
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
 pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr)
 {
@@ -20,7 +20,8 @@ pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr)
 	ZeroMemory(&header, sizeof header);
 	header.lpData = (LPSTR)midiSysExMsg;
 	header.dwFlags = 0;
-	midiOutOpen(&hMidiOut, MIDI_MAPPER, 0, 0, 0);
+	midiOutOpen(&hMidiOut, deviceID, 0, 0, 0);
+	SetVolume(MIDIPLAYER_MAX_VOLUME);
 }
 
 MidiPlayer::~MidiPlayer()
@@ -144,7 +145,8 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd)
 
 void MidiPlayer::SetVolume(unsigned v)
 {
-	v > MIDIPLAYER_MAX_VOLUME ? volume = MIDIPLAYER_MAX_VOLUME : volume = v;
+	//https://msdn.microsoft.com/zh-cn/library/windows/desktop/dd798480.aspx
+	midiOutSetVolume(hMidiOut, MAKELONG(0xFFFF * v / MIDIPLAYER_MAX_VOLUME, 0xFFFF * v / MIDIPLAYER_MAX_VOLUME));
 }
 
 bool MidiPlayer::SetPos(float pos)
@@ -190,7 +192,6 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
 				第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) >> 16);
-				((BYTE*)&midiEvent)[2] = ((midiEvent >> 16) & 0x000000FF)*volume / MIDIPLAYER_MAX_VOLUME;
 				break;
 			case 0x00000080://音符关
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
