@@ -17,9 +17,6 @@ pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr)
 	channelPitchBend = new unsigned short[nChannels];
 	channelPitchSensitivity = new unsigned char[nChannels];
 	VarReset();
-	ZeroMemory(&header, sizeof header);
-	header.lpData = (LPSTR)midiSysExMsg;
-	header.dwFlags = 0;
 	midiOutOpen(&hMidiOut, deviceID, 0, 0, 0);
 	SetVolume(MIDIPLAYER_MAX_VOLUME);
 }
@@ -181,7 +178,6 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 		midiEvent = 0;
 		switch (nMsgSize)
 		{
-		case 4:midiEvent |= *(int*)midifile[0][nEvent].data() & 0xFF000000;
 		case 3:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x00FF0000;
 		case 2:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x0000FF00;
 		case 1:midiEvent |= *(int*)midifile[0][nEvent].data() & 0x000000FF;
@@ -224,8 +220,12 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 		default:
 			if (sendLongMsg)
 			{
+				if (midifile[0][nEvent].isMeta())break;//不清楚这样行不行
 				for (int i = 0; i < nMsgSize; i++)
 					midiSysExMsg[i] = midifile[0][nEvent][i];
+				ZeroMemory(&header, sizeof header);
+				header.lpData = (LPSTR)midiSysExMsg;
+				header.dwFlags = 0;
 				header.dwBufferLength = nMsgSize;
 				midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
 				midiOutLongMsg(hMidiOut, &header, sizeof(header));
