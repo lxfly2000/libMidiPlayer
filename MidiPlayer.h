@@ -65,6 +65,8 @@ public:
 	double GetPosTimeInSeconds();
 	//获取事件总数
 	int GetEventCount();
+	//获取小节拍数
+	int GetStepsPerBar();
 	//设置播放完成后的回调函数，参数为函数指针和参数指针
 	void SetOnFinishPlay(void(*func)(void*), void*);
 protected:
@@ -99,6 +101,7 @@ private:
 	int polyphone;
 
 	int deltaTime;
+	int stepsperbar;
 	RPNType rpn;
 	const unsigned nMaxSysExMsg;
 	const unsigned nChannels;
