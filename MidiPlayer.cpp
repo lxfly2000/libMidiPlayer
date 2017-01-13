@@ -45,6 +45,7 @@ void MidiPlayer::VarReset(bool doStop)
 	nLoopStartEvent = 0;
 	nPlayStatus = 0;
 	polyphone = 0;
+	stepsperbar = 4;
 	if (doStop)Stop();
 }
 
@@ -173,8 +174,6 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 	if(nEvent < nEventCount)while (midifile[0][nEvent].tick <= nextTick)
 	{
 		nMsgSize = (int)midifile[0][nEvent].size();
-		if (midifile[0][nEvent].isTempo())
-			tempo = (float)midifile[0][nEvent].getTempoBPM();
 		midiEvent = 0;
 		switch (nMsgSize)
 		{
@@ -218,9 +217,15 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			midiOutShortMsg(hMidiOut, midiEvent);
 			break;
 		default:
-			if (sendLongMsg)
+			if (midifile[0][nEvent].isMeta())//不清楚这样行不行
 			{
-				if (midifile[0][nEvent].isMeta())break;//不清楚这样行不行
+				if (midifile[0][nEvent].isTempo())
+					tempo = (float)midifile[0][nEvent].getTempoBPM();
+				else if (midifile[0][nEvent].data()[1] == 0x58)
+					stepsperbar = midifile[0][nEvent].data()[3];
+			}
+			else if (sendLongMsg)
+			{
 				for (int i = 0; i < nMsgSize; i++)
 					midiSysExMsg[i] = midifile[0][nEvent][i];
 				ZeroMemory(&header, sizeof header);
@@ -324,4 +329,9 @@ void MidiPlayer::SetOnFinishPlay(void(*func)(void*), void* param)
 {
 	pFuncOnFinishPlay = func;
 	paramOnFinishPlay = param;
+}
+
+int MidiPlayer::GetStepsPerBar()
+{
+	return stepsperbar;
 }
