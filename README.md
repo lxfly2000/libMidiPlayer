@@ -1,6 +1,5 @@
-因为我可能用不到动态库的版本了，所以就把那个删了。
----
-因为我做的另一个程序中需要用静态库，所以就做了这个静态版本的 libMidiPlayer.
+* 因为我可能不需要动态库的版本，所以就把那个删了。
+
 ---
 # libMidiPlayer
 A VERY easy-to-use library for midi files playing back in programs.
@@ -43,8 +42,5 @@ int main()
 }
 ```
 
-## 测试程序
-本程序的 testmain.cpp 是测试用程序，编译好后打开它，可以在程序中选择播放文件并设置循环。
-
 ## 应用程序示例
-* [VisualMIDIPlayer](https://pan.baidu.com/s/1b0Tkce)
+* [VisualMIDIPlayer](https://github.com/lxfly2000/VisualMIDIPlayer)
