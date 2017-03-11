@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MidiPlayer", "MIDIPlayer.vcxproj", "{01E92B7C-8942-4C44-98A7-9F9CA97E683B}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -9,11 +9,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MidiPlayer", "MIDIPlayer.vc
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "midifile", "midifile.vcxproj", "{7F98F2E2-CCED-470C-B5C3-FB337693B13A}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestMidiPlayer", "TestMidiPlayer.vcxproj", "{2C42AD96-BA74-4C36-AB8A-225311FCBABA}"
-	ProjectSection(ProjectDependencies) = postProject
-		{01E92B7C-8942-4C44-98A7-9F9CA97E683B} = {01E92B7C-8942-4C44-98A7-9F9CA97E683B}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,14 +34,6 @@ Global
 		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x64.Build.0 = Release|x64
 		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x86.ActiveCfg = Release|Win32
 		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x86.Build.0 = Release|Win32
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Debug|x64.ActiveCfg = Debug|x64
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Debug|x64.Build.0 = Debug|x64
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Debug|x86.ActiveCfg = Debug|Win32
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Debug|x86.Build.0 = Debug|Win32
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Release|x64.ActiveCfg = Release|x64
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Release|x64.Build.0 = Release|x64
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Release|x86.ActiveCfg = Release|Win32
-		{2C42AD96-BA74-4C36-AB8A-225311FCBABA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
