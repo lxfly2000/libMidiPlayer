@@ -32,6 +32,8 @@ public:
 	bool Play(bool = true);
 	//暂停
 	void Pause();
+	//清除所有通道的声音，参数为是否清空键盘状态，默认为否
+	void Panic(bool = false);
 	//停止，参数设置为 true 会执行 MIDI 重置操作
 	void Stop(bool = true);
 	//参数：循环开始点，循环结束点（以 tick 为单位），均为 0 表示不循环；

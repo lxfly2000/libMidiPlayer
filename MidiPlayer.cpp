@@ -105,8 +105,18 @@ void MidiPlayer::Pause()
 	if (nPlayStatus == 0)return;
 	nPlayStatus = 0;
 	timeKillEvent(timerID);
+	Panic();
+}
+
+void MidiPlayer::Panic(bool resetkeyboard)
+{
 	for (int i = 0x00007BB0; i < 0x00007BBF; i += 0x00000001)
 		midiOutShortMsg(hMidiOut, i);
+	if (resetkeyboard)
+	{
+		polyphone = 0;
+		ZeroMemory(keyPressure, nChannels*nKeys*sizeof(*keyPressure));
+	}
 }
 
 void MidiPlayer::Stop(bool bResetMidi)
@@ -152,6 +162,8 @@ bool MidiPlayer::SetPos(float pos)
 	if (!midifile[0].size())
 		return false;
 	if (pos > midifile[0][nEventCount - 1].tick)
+		return false;
+	if (pos < 0.0f)
 		return false;
 	nextTick = pos;
 	for (int i = 0; i < nEventCount; i++)
