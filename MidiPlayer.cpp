@@ -143,7 +143,7 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd)
 	loopStartTick = posStart;
 	loopEndTick = posEnd;
 	for (int i = 0; i < nEventCount; i++)
-		if (midifile[0][i].tick >= loopStartTick)
+		if (midifile[0][i].tick > loopStartTick)
 		{
 			nLoopStartEvent = i;
 			break;
