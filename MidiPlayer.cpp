@@ -74,6 +74,25 @@ bool MidiPlayer::LoadStream(std::stringstream &mem)
 {
 	Stop();
 	Unload();
+	char magic[4];
+	mem.read(magic, ARRAYSIZE(magic));
+	if (strncmp(magic, "RIFF", ARRAYSIZE(magic)) == 0)
+	{
+		struct RMIDHeader
+		{
+			char strRIFF[4];
+			int chunkSize;
+			char strFormat[4];
+			char strdata[4];
+			int midiFileChunkSize;
+		}rmi;
+		mem.seekg(0);
+		mem.read((char*)&rmi, sizeof rmi);
+		std::string memstr = mem.str();
+		memstr = memstr.substr(sizeof rmi, rmi.midiFileChunkSize);
+		mem.str(memstr);
+	}
+	else mem.seekg(0);
 	//read使用的是不带const的变量
 	if (!midifile.read(mem))return false;
 	VarReset(false);
