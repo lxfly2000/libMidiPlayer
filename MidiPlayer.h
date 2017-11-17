@@ -53,6 +53,15 @@ struct MIDIMetaStructure
 	{
 		delete pData;
 	}
+	//参考：https://msdn.microsoft.com/library/dd293665.aspx
+	MIDIMetaStructure(MIDIMetaStructure &&other)
+	{
+		metaMark = other.metaMark;
+		midiMetaEventType = other.midiMetaEventType;
+		dataLength = other.dataLength;
+		pData = other.pData;
+		other.pData = nullptr;
+	}
 };
 
 class MidiPlayer
