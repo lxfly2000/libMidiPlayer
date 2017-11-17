@@ -2,6 +2,7 @@
 #include"MidiFile.h"
 #include<Windows.h>
 #include<sstream>
+#include<list>
 
 #define MIDIPLAYER_MAX_VOLUME 100u
 
@@ -13,6 +14,45 @@ union RPNType
 		unsigned char msb;
 	}rpndivided;
 	unsigned short rpnvalue;
+};
+
+enum MIDIMetaEventType
+{
+	MIDI_META_SEQUENCE_NUMBER = 0,
+	MIDI_META_TEXT = 1,
+	MIDI_META_COPYRIGHT = 2,
+	MIDI_META_TRACK_NAME = 3,
+	MIDI_META_INSTRUMENT_NAME = 4,
+	MIDI_META_LYRICS = 5,
+	MIDI_META_MARKER = 6,
+	MIDI_META_CUE_POINT = 7,
+	MIDI_META_CHANNEL_PREFIX = 32,
+	MIDI_META_END_OF_TRACK = 47,
+	MIDI_META_SET_TEMPO = 81,
+	MIDI_META_SMPTE_OFFSET = 84,
+	MIDI_META_BEATS = 88,
+	MIDI_META_KEY = 89,
+	MIDI_META_SEQUENCE_SPECIFIC = 127
+};
+
+struct MIDIMetaStructure
+{
+	BYTE metaMark;//0xFF
+	BYTE midiMetaEventType;//可转换为MIDIMetaEventType枚举类型
+	BYTE dataLength;//数据区长度
+	BYTE *pData;//Meta数据区
+	MIDIMetaStructure(BYTE *psrc)
+	{
+		metaMark = psrc[0];
+		midiMetaEventType = psrc[1];
+		dataLength = psrc[2];
+		pData = new BYTE[dataLength];
+		memcpy(pData, psrc + 3, dataLength);
+	}
+	~MIDIMetaStructure()
+	{
+		delete pData;
+	}
 };
 
 class MidiPlayer
@@ -69,6 +109,8 @@ public:
 	int GetEventCount();
 	//获取小节拍数
 	int GetStepsPerBar();
+	//获取MIDI文件中的元数据信息，返回值为信息数量
+	int GetMIDIMeta(std::list<MIDIMetaStructure> &outMetaList);
 	//设置播放完成后的回调函数，参数为函数指针和参数指针
 	void SetOnFinishPlay(void(*func)(void*), void*);
 protected:

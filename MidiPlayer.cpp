@@ -366,3 +366,12 @@ int MidiPlayer::GetStepsPerBar()
 {
 	return stepsperbar;
 }
+
+int MidiPlayer::GetMIDIMeta(std::list<MIDIMetaStructure> &metalist)
+{
+	int i = 0;
+	for (; i < nEventCount; i++)
+		if (midifile[0][i].isMeta())
+			metalist.push_back(MIDIMetaStructure(midifile[0][i].data()));
+	return i;
+}
