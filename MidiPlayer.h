@@ -86,8 +86,10 @@ public:
 	//停止，参数设置为 true 会执行 MIDI 重置操作
 	void Stop(bool = true);
 	//参数：循环开始点，循环结束点（以 tick 为单位），均为 0 表示不循环；
+	//includeLeft: 左区间是否为闭区间（默认为开区间）
+	//includeRight: 右区间是否为闭区间（默认为闭区间，该选项暂时不用）
 	//设置值超过序列范围或不符合逻辑返回 false
-	bool SetLoop(float, float);
+	bool SetLoop(float, float, bool includeLeft = false, bool includeRight = true);
 	//设置当前的播放位置，单位为 tick
 	bool SetPos(float);
 	//取值范围：[0, 100] %，大于 100 的视为 100
@@ -136,6 +138,7 @@ private:
 	float nextTick;
 	float loopStartTick;
 	float loopEndTick;
+	bool loopIncludeLeft, loopIncludeRight;
 	float tempo;
 	int timerID;
 	int nEvent;

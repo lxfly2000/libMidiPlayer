@@ -22,7 +22,7 @@
     <ProjectGuid>{01E92B7C-8942-4C44-98A7-9F9CA97E683B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MIDIPlayer</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
     <ProjectName>MidiPlayer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

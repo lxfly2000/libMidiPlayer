@@ -46,6 +46,8 @@ void MidiPlayer::VarReset(bool doStop)
 	nPlayStatus = 0;
 	polyphone = 0;
 	stepsperbar = 4;
+	loopIncludeLeft = false;
+	loopIncludeRight = true;
 	if (doStop)Stop();
 }
 
@@ -149,7 +151,7 @@ void MidiPlayer::Stop(bool bResetMidi)
 	INIT_ARRAY(channelPitchSensitivity, nChannels, 2);
 }
 
-bool MidiPlayer::SetLoop(float posStart, float posEnd)
+bool MidiPlayer::SetLoop(float posStart, float posEnd, bool includeLeft, bool includeRight)
 {
 	if (posStart > posEnd)
 		return false;
@@ -161,8 +163,10 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd)
 		return false;
 	loopStartTick = posStart;
 	loopEndTick = posEnd;
+	loopIncludeLeft = includeLeft;
+	loopIncludeRight = includeRight;
 	for (int i = 0; i < nEventCount; i++)
-		if (midifile[0][i].tick > loopStartTick)
+		if (loopIncludeLeft ? midifile[0][i].tick >= loopStartTick : midifile[0][i].tick > loopStartTick)
 		{
 			nLoopStartEvent = i;
 			break;
@@ -202,6 +206,8 @@ void MidiPlayer::SetSendLongMsg(bool bSend)
 void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
 	nextTick += midifile.getTicksPerQuarterNote()*deltaTime*tempo / 60000;
+	//本来是想在这个 while 里判断右循环是否为闭区间着，
+	//但突然一想觉得既要考虑带有判断的循环问题又要考虑这是否会影响结尾事件的发送所以还是暂时先放着吧。
 	if(nEvent < nEventCount)while (midifile[0][nEvent].tick <= nextTick)
 	{
 		nMsgSize = (int)midifile[0][nEvent].size();
