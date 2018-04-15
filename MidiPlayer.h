@@ -64,6 +64,9 @@ struct MIDIMetaStructure
 	}
 };
 
+typedef void(*MPOnProgramChangeFunc)(int channel, int program);
+typedef void(*MPOnFinishPlayFunc)(void*param);
+
 class MidiPlayer
 {
 public:
@@ -123,7 +126,9 @@ public:
 	//获取MIDI文件中的元数据信息，返回值为信息数量
 	int GetMIDIMeta(std::list<MIDIMetaStructure> &outMetaList);
 	//设置播放完成后的回调函数，参数为函数指针和参数指针
-	void SetOnFinishPlay(void(*func)(void*), void*);
+	void SetOnFinishPlay(MPOnFinishPlayFunc, void*);
+	//设置音色变换的回调函数，参数为通道号和音色号
+	void SetOnProgramChange(MPOnProgramChangeFunc);
 protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
@@ -132,8 +137,9 @@ private:
 	void SetKeyPressure(unsigned, unsigned, unsigned char);
 	void SetChannelPitchBendFromRaw(unsigned, unsigned short);
 	void SetChannelPitchBendRange(unsigned, unsigned char);
-	void(*pFuncOnFinishPlay)(void*);
+	MPOnFinishPlayFunc pFuncOnFinishPlay;
 	void* paramOnFinishPlay;
+	MPOnProgramChangeFunc pFuncOnProgramChange;
 	bool sendLongMsg;
 	float nextTick;
 	float loopStartTick;

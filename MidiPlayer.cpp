@@ -8,7 +8,7 @@ MidiPlayer* MidiPlayer::_pObj = nullptr;
 
 MidiPlayer::MidiPlayer(unsigned deviceID) :sendLongMsg(true), timerID(0), deltaTime(10),
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
-pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr)
+pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nullptr)
 {
 	if (MidiPlayer::_pObj)delete MidiPlayer::_pObj;
 	MidiPlayer::_pObj = this;
@@ -228,6 +228,10 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			case 0x00000080://音符关
 				SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
 				break;
+			case 0x000000C0://音色变换
+				if (pFuncOnProgramChange)
+					pFuncOnProgramChange(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8);
+				break;
 			case 0x000000E0://弯音
 				SetChannelPitchBendFromRaw(midiEvent & 0x0000000F, (midiEvent & 0x00FFFF00) >> 8);
 				break;
@@ -362,7 +366,7 @@ int MidiPlayer::GetEventCount()
 	return nEventCount;
 }
 
-void MidiPlayer::SetOnFinishPlay(void(*func)(void*), void* param)
+void MidiPlayer::SetOnFinishPlay(MPOnFinishPlayFunc func, void* param)
 {
 	pFuncOnFinishPlay = func;
 	paramOnFinishPlay = param;
@@ -380,4 +384,9 @@ int MidiPlayer::GetMIDIMeta(std::list<MIDIMetaStructure> &metalist)
 		if (midifile[0][i].isMeta())
 			metalist.push_back(MIDIMetaStructure(midifile[0][i].data()));
 	return i;
+}
+
+void MidiPlayer::SetOnProgramChange(MPOnProgramChangeFunc f)
+{
+	pFuncOnProgramChange = f;
 }
