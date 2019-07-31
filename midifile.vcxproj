@@ -47,24 +47,28 @@
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;_DEBUG</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>midifile\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;NDEBUG</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>midifile\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>midifile\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>midifile\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -72,6 +76,12 @@
     <ClCompile Include="midifile/src-library/*.cpp">
       <AdditionalIncludeDirectories>midifile\include</AdditionalIncludeDirectories>
     </ClCompile>
+    <ClCompile Include="midifile\src\Binasc.cpp" />
+    <ClCompile Include="midifile\src\MidiEvent.cpp" />
+    <ClCompile Include="midifile\src\MidiEventList.cpp" />
+    <ClCompile Include="midifile\src\MidiFile.cpp" />
+    <ClCompile Include="midifile\src\MidiMessage.cpp" />
+    <ClCompile Include="midifile\src\Options.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="midifile/include/MidiFile.h" />
