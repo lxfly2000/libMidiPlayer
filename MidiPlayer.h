@@ -6,6 +6,8 @@
 
 #define MIDIPLAYER_MAX_VOLUME 100u
 
+using namespace smf;
+
 union RPNType
 {
 	struct RPNDivided

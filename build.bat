@@ -2,7 +2,7 @@
 if "%1"=="C" goto Clean
 if "%1"=="c" goto Clean
 setlocal EnableDELAYEDEXPANSION
-set _MSBuild_=F:\Program Files\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe
+set _MSBuild_=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe
 if not exist "!_MSBuild_!" goto _NO_MSBuild_
 set _ProjectName_=midifile.vcxproj
 title 编译 %_ProjectName_%···
@@ -19,7 +19,7 @@ title 编译 %_ProjectName_%···
 title 已完成，请检查窗口中的输出结果。
 goto End
 :_NO_MSBuild_
-echo 你需要安装 VS2017 才能运行该脚本。
+echo 你需要安装 VS2019 才能运行该脚本。
 goto End
 :End
 pause
