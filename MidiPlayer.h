@@ -76,8 +76,6 @@ public:
 	MidiPlayer(unsigned deviceID = MIDI_MAPPER);
 	//释放对象
 	~MidiPlayer();
-	//检测是否使用 WinRT MIDI
-	bool IsUsingWinRTMidi();
 	//加载文件，如果失败返回 false，否则为 true
 	bool LoadFile(const char*);
 	//加载内存流，失败返回 false, 成功返回 true

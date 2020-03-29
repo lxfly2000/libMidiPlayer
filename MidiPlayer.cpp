@@ -2,33 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "WindowsVersionHelper.h"
-#include "WinRTMidi.h"
-
-#pragma comment(lib,"version.lib")
-
 #define INIT_ARRAY(pointer,n,var) for(size_t i=0;i<(n);i++)(pointer)[i]=(var)
-
-static bool isUsingWinRTMidi = false;
-static HMODULE hModWinRTMIDI = NULL;
-
-//WinRT MIDI Functions
-static WinRT::WinRTMidiInitializeFunc WinRTMidiInitialize;
-static WinRT::WinRTMidiFreeFunc WinRTMidiFree;
-static WinRT::WinRTMidiGetPortWatcherFunc WinRTMidiGetPortWatcher;
-static WinRT::WinRTMidiInPortOpenFunc WinRTMidiInPortOpen;
-static WinRT::WinRTMidiInPortFreeFunc WinRTMidiInPortFree;
-static WinRT::WinRTMidiOutPortOpenFunc WinRTMidiOutPortOpen;
-static WinRT::WinRTMidiOutPortFreeFunc WinRTMidiOutPortFree;
-static WinRT::WinRTMidiOutPortSendFunc WinRTMidiOutPortSend;
-static WinRT::WinRTWatcherPortCountFunc WinRTWatcherPortCount;
-static WinRT::WinRTWatcherPortNameFunc WinRTWatcherPortName;
-static WinRT::WinRTWatcherPortTypeFunc WinRTWatcherPortType;
-
-//WinRT MIDI variables
-static WinRT::WinRTMidiPtr winRTMidiPtr = nullptr;
-static WinRT::WinRTMidiOutPortPtr winRTMidiOutPort = nullptr;
-static DWORD winRTMidiDeviceId = 0;
 
 MidiPlayer* MidiPlayer::_pObj = nullptr;
 
@@ -36,29 +10,6 @@ MidiPlayer::MidiPlayer(unsigned deviceID) :sendLongMsg(true), timerID(0), deltaT
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
 pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nullptr)
 {
-	if (WinRT::windows10orGreater())
-	{
-		hModWinRTMIDI = LoadLibrary(TEXT("winrtmidi.dll"));
-		if (hModWinRTMIDI)
-		{
-			WinRTMidiInitialize = (WinRT::WinRTMidiInitializeFunc)GetProcAddress(hModWinRTMIDI, "winrt_initialize_midi");
-			WinRTMidiFree = (WinRT::WinRTMidiFreeFunc)GetProcAddress(hModWinRTMIDI, "winrt_free_midi");
-			WinRTMidiGetPortWatcher = (WinRT::WinRTMidiGetPortWatcherFunc)GetProcAddress(hModWinRTMIDI, "winrt_get_portwatcher");
-			WinRTMidiInPortOpen = (WinRT::WinRTMidiInPortOpenFunc)GetProcAddress(hModWinRTMIDI, "winrt_open_midi_in_port");
-			WinRTMidiInPortFree = (WinRT::WinRTMidiInPortFreeFunc)GetProcAddress(hModWinRTMIDI, "winrt_free_midi_in_port");
-			WinRTMidiOutPortOpen = (WinRT::WinRTMidiOutPortOpenFunc)GetProcAddress(hModWinRTMIDI, "winrt_open_midi_out_port");
-			WinRTMidiOutPortFree = (WinRT::WinRTMidiOutPortFreeFunc)GetProcAddress(hModWinRTMIDI, "winrt_free_midi_out_port");
-			WinRTMidiOutPortSend = (WinRT::WinRTMidiOutPortSendFunc)GetProcAddress(hModWinRTMIDI, "winrt_midi_out_port_send");
-			WinRTWatcherPortCount = (WinRT::WinRTWatcherPortCountFunc)GetProcAddress(hModWinRTMIDI, "winrt_watcher_get_port_count");
-			WinRTWatcherPortName = (WinRT::WinRTWatcherPortNameFunc)GetProcAddress(hModWinRTMIDI, "winrt_watcher_get_port_name");
-			WinRTWatcherPortType = (WinRT::WinRTWatcherPortTypeFunc)GetProcAddress(hModWinRTMIDI, "winrt_watcher_get_port_type");
-
-			//Initialize WinRT MIDI
-			if (WinRTMidiInitialize(nullptr, &winRTMidiPtr) == WinRT::WINRT_NO_ERROR)
-				isUsingWinRTMidi = true;
-		}
-	}
-
 	if (MidiPlayer::_pObj)delete MidiPlayer::_pObj;
 	MidiPlayer::_pObj = this;
 	midiSysExMsg = new BYTE[nMaxSysExMsg];
@@ -67,11 +18,7 @@ pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nul
 	channelPitchSensitivity = new unsigned char[nChannels];
 	channelEnabled = new bool[nChannels];
 	VarReset();
-	winRTMidiDeviceId = deviceID;
-	if (isUsingWinRTMidi)
-		WinRTMidiOutPortOpen(winRTMidiPtr, deviceID, &winRTMidiOutPort);
-	else
-		midiOutOpen(&hMidiOut, deviceID, 0, 0, 0);
+	midiOutOpen(&hMidiOut, deviceID, 0, 0, 0);
 	SetVolume(MIDIPLAYER_MAX_VOLUME);
 }
 
@@ -79,25 +26,13 @@ MidiPlayer::~MidiPlayer()
 {
 	Stop();
 	Unload();
-	if (isUsingWinRTMidi)
-		WinRTMidiOutPortFree(winRTMidiOutPort);
-	else
-		midiOutClose(hMidiOut);
+	midiOutClose(hMidiOut);
 	delete[]channelEnabled;
 	delete[]channelPitchSensitivity;
 	delete[]channelPitchBend;
 	delete[]keyPressure;
 	delete[]midiSysExMsg;
 	MidiPlayer::_pObj = nullptr;
-	if (isUsingWinRTMidi)
-		WinRTMidiFree(winRTMidiPtr);
-	if (hModWinRTMIDI)
-		FreeLibrary(hModWinRTMIDI);
-}
-
-bool MidiPlayer::IsUsingWinRTMidi()
-{
-	return isUsingWinRTMidi;
 }
 
 void MidiPlayer::VarReset(bool doStop)
@@ -203,13 +138,10 @@ void MidiPlayer::Pause(bool panic)
 void MidiPlayer::Panic(unsigned channel, bool resetkeyboard)
 {
 	int midiData = 0x00007BB0 | (channel & 0xF);
-	if (isUsingWinRTMidi)
-		WinRTMidiOutPortSend(winRTMidiOutPort, (PBYTE)&midiData, sizeof midiData);
-	else
-		midiOutShortMsg(hMidiOut, midiData);
+	midiOutShortMsg(hMidiOut, midiData);
 	if (resetkeyboard)
 	{
-		for (int i = 0; i < nKeys; i++)
+		for (unsigned i = 0; i < nKeys; i++)
 			SetKeyPressure(channel, i, 0);
 	}
 }
@@ -225,15 +157,7 @@ void MidiPlayer::Stop(bool bResetMidi)
 	Pause();
 	polyphone = 0;
 	if (bResetMidi)
-	{
-		if (isUsingWinRTMidi)
-		{
-			WinRTMidiOutPortFree(winRTMidiOutPort);
-			WinRTMidiOutPortOpen(winRTMidiPtr, winRTMidiDeviceId, &winRTMidiOutPort);
-		}
-		else
-			midiOutReset(hMidiOut);
-	}
+		midiOutReset(hMidiOut);
 	SetPos(0.0f);
 	ZeroMemory(keyPressure, nChannels*nKeys*sizeof(*keyPressure));
 	INIT_ARRAY(channelPitchBend, nChannels, 0x2000);
@@ -265,13 +189,8 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd, bool includeLeft, bool in
 
 void MidiPlayer::SetVolume(unsigned v)
 {
-	if (isUsingWinRTMidi)
-	{
-		//Not applicable to WinRT MIDI
-	}
-	else
-		//https://msdn.microsoft.com/zh-cn/library/windows/desktop/dd798480.aspx
-		midiOutSetVolume(hMidiOut, MAKELONG(0xFFFF * v / MIDIPLAYER_MAX_VOLUME, 0xFFFF * v / MIDIPLAYER_MAX_VOLUME));
+	//https://msdn.microsoft.com/zh-cn/library/windows/desktop/dd798480.aspx
+	midiOutSetVolume(hMidiOut, MAKELONG(0xFFFF * v / MIDIPLAYER_MAX_VOLUME, 0xFFFF * v / MIDIPLAYER_MAX_VOLUME));
 }
 
 bool MidiPlayer::SetPos(float pos)
@@ -351,10 +270,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				}
 				break;
 			}
-			if (isUsingWinRTMidi)
-				WinRTMidiOutPortSend(winRTMidiOutPort, (PBYTE)&midiEvent, sizeof midiEvent);
-			else
-				midiOutShortMsg(hMidiOut, midiEvent);
+			midiOutShortMsg(hMidiOut, midiEvent);
 			break;
 		default:
 			if (midifile[0][nEvent].isMeta())//不清楚这样行不行
@@ -372,16 +288,9 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				header.lpData = (LPSTR)midiSysExMsg;
 				header.dwFlags = 0;
 				header.dwBufferLength = nMsgSize;
-				if (isUsingWinRTMidi)
-				{
-					WinRTMidiOutPortSend(winRTMidiPtr, midiSysExMsg, nMsgSize);
-				}
-				else
-				{
-					midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
-					midiOutLongMsg(hMidiOut, &header, sizeof(header));
-					midiOutUnprepareHeader(hMidiOut, &header, sizeof(header));
-				}
+				midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
+				midiOutLongMsg(hMidiOut, &header, sizeof(header));
+				midiOutUnprepareHeader(hMidiOut, &header, sizeof(header));
 			}
 			break;
 		}
