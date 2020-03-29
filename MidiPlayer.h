@@ -73,9 +73,11 @@ class MidiPlayer
 {
 public:
 	//创建一个 MidiPlayer 类型的对象，参数为 MIDI 设备序号（从0算起），默认值为 MIDI_MAPPER
-	MidiPlayer(unsigned = MIDI_MAPPER);
+	MidiPlayer(unsigned deviceID = MIDI_MAPPER);
 	//释放对象
 	~MidiPlayer();
+	//检测是否使用 WinRT MIDI
+	bool IsUsingWinRTMidi();
 	//加载文件，如果失败返回 false，否则为 true
 	bool LoadFile(const char*);
 	//加载内存流，失败返回 false, 成功返回 true
@@ -84,10 +86,12 @@ public:
 	void Unload();
 	//参数：true 从当前位置继续，false 从头开始
 	bool Play(bool = true);
-	//暂停
-	void Pause();
+	//暂停，参数：是否 panic
+	void Pause(bool panic = true);
+	//清除指定通道的声音，参数2为是否清空键盘状态，默认为否
+	void Panic(unsigned channel, bool = false);
 	//清除所有通道的声音，参数为是否清空键盘状态，默认为否
-	void Panic(bool = false);
+	void PanicAllChannel(bool = false);
 	//停止，参数设置为 true 会执行 MIDI 重置操作
 	void Stop(bool = true);
 	//参数：循环开始点，循环结束点（以 tick 为单位），均为 0 表示不循环；
@@ -131,6 +135,14 @@ public:
 	void SetOnFinishPlay(MPOnFinishPlayFunc, void*);
 	//设置音色变换的回调函数，参数为通道号和音色号
 	void SetOnProgramChange(MPOnProgramChangeFunc);
+	//设置播放速度
+	void SetPlaybackSpeed(float);
+	//获取播放速度
+	float GetPlaybackSpeed();
+	//设置启用/禁用通道
+	void SetChannelEnabled(unsigned channel, bool enabled);
+	//获取启用/禁用通道
+	bool GetChannelEnabled(unsigned channel);
 protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
@@ -163,6 +175,8 @@ private:
 	unsigned short *channelPitchBend;//0x0000-0x2000-0x3FFF(-8192 - 0 - +8191)
 	unsigned char *channelPitchSensitivity;//弯音幅度，半音数，0x00-0x18（0到24个半音）
 	int polyphone;
+	float playbackSpeed;
+	bool *channelEnabled;
 
 	int deltaTime;
 	int stepsperbar;

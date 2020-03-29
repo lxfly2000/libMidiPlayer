@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29920.165
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MidiPlayer", "MIDIPlayer.vcxproj", "{01E92B7C-8942-4C44-98A7-9F9CA97E683B}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -37,5 +37,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B374B78B-4D20-45DE-9B47-EE8897345842}
 	EndGlobalSection
 EndGlobal
