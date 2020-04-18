@@ -172,6 +172,11 @@
   <ItemGroup>
     <ClInclude Include="MidiPlayer.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="midifile.vcxproj">
+      <Project>{7f98f2e2-cced-470c-b5c3-fb337693b13a}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

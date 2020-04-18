@@ -82,8 +82,8 @@ public:
 	bool LoadStream(std::stringstream&);
 	//释放序列资源
 	void Unload();
-	//参数：true 从当前位置继续，false 从头开始
-	bool Play(bool = true);
+	//参数1：true 从当前位置继续，false 从头开始，参数2：事件过多时是否丢弃
+	bool Play(bool = true, bool = true);
 	//暂停，参数：是否 panic
 	void Pause(bool panic = true);
 	//清除指定通道的声音，参数2为是否清空键盘状态，默认为否
@@ -115,6 +115,8 @@ public:
 	int GetPosEventNum();
 	//获取复音数
 	int GetPolyphone();
+	//获取丢失事件数
+	int GetDrop();
 	//获取四分音符所占的 ticks
 	int GetQuarterNoteTicks();
 	//获取当前的 tick
@@ -161,10 +163,9 @@ private:
 	int timerID;
 	int nEvent;
 	int nEventCount;
-	int nMsgSize;
-	int midiEvent;
 	int nLoopStartEvent;
 	int nPlayStatus;//0=停止或暂停，1=播放
+	bool bPlayDropEvents;
 	MidiFile midifile;
 	BYTE *midiSysExMsg;
 	HMIDIOUT hMidiOut;
@@ -182,4 +183,8 @@ private:
 	const unsigned nMaxSysExMsg;
 	const unsigned nChannels;
 	const unsigned nKeys;
+
+	UINT timerInterval;
+	std::vector<int> _mfNextTickEvents;
+	int dropEventsCount;
 };
