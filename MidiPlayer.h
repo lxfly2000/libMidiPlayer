@@ -66,8 +66,10 @@ struct MIDIMetaStructure
 	}
 };
 
-typedef void(*MPOnProgramChangeFunc)(int channel, int program);
+typedef void(*MPOnProgramChangeFunc)(BYTE u4_channel, BYTE program);
 typedef void(*MPOnFinishPlayFunc)(void*param);
+typedef void(*MPOnControlChangeFunc)(BYTE u4_channel, BYTE cc, BYTE val);
+typedef void(*MPOnSysExFunc)(PBYTE data, size_t length);
 
 class MidiPlayer
 {
@@ -135,6 +137,10 @@ public:
 	void SetOnFinishPlay(MPOnFinishPlayFunc, void*);
 	//设置音色变换的回调函数，参数为通道号和音色号
 	void SetOnProgramChange(MPOnProgramChangeFunc);
+	//设置SysEx的回调函数，参数为通道号和音色号
+	void SetOnSysEx(MPOnSysExFunc);
+	//设置CC变换的回调函数，参数为通道号，CC控制器编号，值
+	void SetOnControlChange(MPOnControlChangeFunc);
 	//设置播放速度
 	void SetPlaybackSpeed(float);
 	//获取播放速度
@@ -154,6 +160,8 @@ private:
 	MPOnFinishPlayFunc pFuncOnFinishPlay;
 	void* paramOnFinishPlay;
 	MPOnProgramChangeFunc pFuncOnProgramChange;
+	MPOnControlChangeFunc pFuncOnControlChange;
+	MPOnSysExFunc pFuncOnSysEx;
 	bool sendLongMsg;
 	float nextTick;
 	float loopStartTick;
@@ -161,15 +169,14 @@ private:
 	bool loopIncludeLeft, loopIncludeRight;
 	float tempo;
 	int timerID;
-	int nEvent;
-	int nEventCount;
+	size_t nEvent;
+	size_t nEventCount;
 	int nLoopStartEvent;
 	int nPlayStatus;//0=停止或暂停，1=播放
 	bool bPlayDropEvents;
 	MidiFile midifile;
 	BYTE *midiSysExMsg;
 	HMIDIOUT hMidiOut;
-	MIDIHDR header;
 	unsigned char *keyPressure;
 	unsigned short *channelPitchBend;//0x0000-0x2000-0x3FFF(-8192 - 0 - +8191)
 	unsigned char *channelPitchSensitivity;//弯音幅度，半音数，0x00-0x18（0到24个半音）

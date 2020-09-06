@@ -9,7 +9,8 @@ MidiPlayer* MidiPlayer::_pObj = nullptr;
 
 MidiPlayer::MidiPlayer(unsigned deviceID) :sendLongMsg(true), timerID(0), deltaTime(20),
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
-pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nullptr)
+pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nullptr),
+pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr)
 {
 	if (MidiPlayer::_pObj)delete MidiPlayer::_pObj;
 	MidiPlayer::_pObj = this;
@@ -111,10 +112,10 @@ bool MidiPlayer::LoadStream(std::stringstream &mem)
 	while (_mfNextTickEvents.size() < nEventCount)
 	{
 		int cTick = midifile[0][_mfNextTickEvents.size()].tick;
-		int cNextTick = cTick + midifile.getTicksPerQuarterNote() * deltaTime * cTempo / 60000;
+		int cNextTick = (int)(cTick + midifile.getTicksPerQuarterNote() * deltaTime * cTempo / 60000);
 		if (midifile[0][nEvent].isMeta() && midifile[0][nEvent].isTempo())
 			cTempo = (float)midifile[0][nEvent].getTempoBPM();
-		for (int cEvent = _mfNextTickEvents.size();; cEvent++)
+		for (size_t cEvent = _mfNextTickEvents.size();; cEvent++)
 		{
 			if (cEvent >= nEventCount)
 			{
@@ -206,7 +207,7 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd, bool includeLeft, bool in
 	loopEndTick = posEnd;
 	loopIncludeLeft = includeLeft;
 	loopIncludeRight = includeRight;
-	for (int i = 0; i < nEventCount; i++)
+	for (size_t i = 0; i < nEventCount; i++)
 		if (loopIncludeLeft ? midifile[0][i].tick >= loopStartTick : midifile[0][i].tick > loopStartTick)
 		{
 			nLoopStartEvent = i;
@@ -230,7 +231,7 @@ bool MidiPlayer::SetPos(float pos)
 	if (pos < 0.0f)
 		return false;
 	nextTick = pos;
-	for (int i = 0; i < nEventCount; i++)
+	for (size_t i = 0; i < nEventCount; i++)
 		if (midifile[0][i].tick >= nextTick)
 		{
 			nEvent = i;
@@ -260,73 +261,82 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				nEvent = _mfNextTickEvents[nEvent];
 				break;
 			}
-			size_t nMsgSize = (int)midifile[0][nEvent].size();
-			int midiEvent = *(int*)midifile[0][nEvent].data();
-			if (nMsgSize < 4)
+			DWORD midiEvent = *(DWORD*)midifile[0][nEvent].data();
+			PBYTE b = midifile[0][nEvent].data();
+			if (channelEnabled[b[0] & 0xF])
 			{
-				if (channelEnabled[midiEvent & 0xF])
+				switch (b[0] & 0xF0)//获取MIDI消息类型
 				{
-					switch (midiEvent & 0x000000F0)//获取MIDI消息类型
-					{
-					case 0x00000090://音符开
-						/*第一字节（0x000000##）：MIDI消息类型，MIDI通道
-						第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
-						第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
-						SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, (midiEvent & 0x00FF0000) >> 16);
-						break;
-					case 0x00000080://音符关
-						SetKeyPressure(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8, 0);
-						break;
-					case 0x000000C0://音色变换
-						if (pFuncOnProgramChange)
-							pFuncOnProgramChange(midiEvent & 0x0000000F, (midiEvent & 0x0000FF00) >> 8);
-						break;
-					case 0x000000E0://弯音
-						SetChannelPitchBendFromRaw(midiEvent & 0x0000000F, (midiEvent & 0x00FFFF00) >> 8);
-						break;
-					case 0x000000B0://CC控制器
-						switch (midiEvent & 0x0000FF00)
-						{
-						case 0x00006500://设置RPN的高位
-							rpn.rpndivided.msb = (midiEvent & 0x00FF0000) >> 16;
-							break;
-						case 0x00006400://设置RPN的低位
-							rpn.rpndivided.lsb = (midiEvent & 0x00FF0000) >> 16;
-							break;
-						case 0x00000600://向RPN表示的参数高位写入数据
-							if (rpn.rpndivided.msb == 0)//判断RPN高位是不是表示弯音参数
-								SetChannelPitchBendRange(midiEvent & 0x0000000F, (midiEvent & 0x00FF0000) >> 16);
-							break;
-							/*case 0x00002600://向RPN表示的参数低位写入数据
-								if (rpn.rpndivided.lsb == 0)//判断RPN低位是不是表示弯音参数
-									SetChannelPitchBendRange(midiEvent & 0x0000000F, (midiEvent & 0x00FF0000) >> 24);//因为弯音只用了高位字节所以就不用管低位了。
-								break;*/
-						}
-						break;
-					}
+				case 0x90://音符开
+					/*第一字节（0x000000##）：MIDI消息类型，MIDI通道
+					第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
+					第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
+					SetKeyPressure(b[0] & 0xF, b[1], b[2]);
 					midiOutShortMsg(hMidiOut, midiEvent);
-				}
-			}
-			else
-			{
-				if (midifile[0][nEvent].isMeta())//不清楚这样行不行
-				{
-					if (midifile[0][nEvent].isTempo())
-						tempo = (float)midifile[0][nEvent].getTempoBPM();
-					else if (midifile[0][nEvent].data()[1] == 0x58)
-						stepsperbar = midifile[0][nEvent].data()[3];
-				}
-				else if (sendLongMsg)
-				{
-					for (int i = 0; i < nMsgSize; i++)
-						midiSysExMsg[i] = midifile[0][nEvent][i];
-					ZeroMemory(&header, sizeof header);
-					header.lpData = (LPSTR)midiSysExMsg;
-					header.dwFlags = 0;
-					header.dwBufferLength = nMsgSize;
-					midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
-					midiOutLongMsg(hMidiOut, &header, sizeof(header));
-					midiOutUnprepareHeader(hMidiOut, &header, sizeof(header));
+					break;
+				case 0x80://音符关
+					SetKeyPressure(b[0] & 0xF, b[1], 0);
+					midiOutShortMsg(hMidiOut, midiEvent);
+					break;
+				case 0xA0:
+				case 0xD0:
+					midiOutShortMsg(hMidiOut, midiEvent);
+					break;
+				case 0xC0://音色变换
+					if (pFuncOnProgramChange)
+						pFuncOnProgramChange(b[0] & 0xF, b[1]);
+					midiOutShortMsg(hMidiOut, midiEvent);
+					break;
+				case 0xE0://弯音
+					SetChannelPitchBendFromRaw(b[0] & 0xF, *(PWORD)(b + 1));
+					midiOutShortMsg(hMidiOut, midiEvent);
+					break;
+				case 0xB0://CC控制器
+					switch (b[1])
+					{
+					case 0x65://设置RPN的高位
+						rpn.rpndivided.msb = b[2];
+						break;
+					case 0x64://设置RPN的低位
+						rpn.rpndivided.lsb = b[2];
+						break;
+					case 0x6://向RPN表示的参数高位写入数据
+						if (rpn.rpndivided.msb == 0)//判断RPN高位是不是表示弯音参数
+							SetChannelPitchBendRange(b[0] & 0xF, b[2]);
+						break;
+					/*case 0x26://向RPN表示的参数低位写入数据
+						if (rpn.rpndivided.lsb == 0)//判断RPN低位是不是表示弯音参数
+							SetChannelPitchBendRange(b[0] & 0xF, b[3]);//因为弯音只用了高位字节所以就不用管低位了。
+						break;*/
+					}
+					if (pFuncOnControlChange)
+						pFuncOnControlChange(b[0] & 0xF, b[1], b[2]);
+					midiOutShortMsg(hMidiOut, midiEvent);
+					break;
+				case 0xF0:
+					if (midifile[0][nEvent].isMeta())//不清楚这样行不行
+					{
+						if (midifile[0][nEvent].isTempo())
+							tempo = (float)midifile[0][nEvent].getTempoBPM();
+						else if (midifile[0][nEvent].data()[1] == 0x58)
+							stepsperbar = midifile[0][nEvent].data()[3];
+					}
+					else if (sendLongMsg)
+					{
+						size_t nMsgSize = midifile[0][nEvent].size();
+						for (size_t i = 0; i < nMsgSize; i++)
+							midiSysExMsg[i] = midifile[0][nEvent][i];
+						if (pFuncOnSysEx)
+							pFuncOnSysEx(midiSysExMsg, nMsgSize);
+						MIDIHDR header{};
+						header.lpData = (LPSTR)midiSysExMsg;
+						header.dwFlags = 0;
+						header.dwBufferLength = nMsgSize;
+						midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
+						midiOutLongMsg(hMidiOut, &header, sizeof(header));
+						midiOutUnprepareHeader(hMidiOut, &header, sizeof(header));
+					}
+					break;
 				}
 			}
 			if (++nEvent >= nEventCount)
@@ -436,7 +446,7 @@ int MidiPlayer::GetStepsPerBar()
 
 int MidiPlayer::GetMIDIMeta(std::list<MIDIMetaStructure> &metalist)
 {
-	int i = 0;
+	size_t i = 0;
 	for (; i < nEventCount; i++)
 		if (midifile[0][i].isMeta())
 			metalist.push_back(MIDIMetaStructure(midifile[0][i].data()));
@@ -446,6 +456,16 @@ int MidiPlayer::GetMIDIMeta(std::list<MIDIMetaStructure> &metalist)
 void MidiPlayer::SetOnProgramChange(MPOnProgramChangeFunc f)
 {
 	pFuncOnProgramChange = f;
+}
+
+void MidiPlayer::SetOnControlChange(MPOnControlChangeFunc f)
+{
+	pFuncOnControlChange = f;
+}
+
+void MidiPlayer::SetOnSysEx(MPOnSysExFunc f)
+{
+	pFuncOnSysEx = f;
 }
 
 void MidiPlayer::SetPlaybackSpeed(float speed)
