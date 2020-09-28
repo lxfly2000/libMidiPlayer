@@ -149,6 +149,10 @@ public:
 	void SetChannelEnabled(unsigned channel, bool enabled);
 	//获取启用/禁用通道
 	bool GetChannelEnabled(unsigned channel);
+	//获取MIDIOUT句柄
+	HMIDIOUT GetHandle();
+	void _ProcessMidiShortEvent(DWORD midiEvent,bool sendMidiOut);
+	void _ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut);
 protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);

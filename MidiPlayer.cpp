@@ -267,51 +267,8 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			{
 				switch (b[0] & 0xF0)//获取MIDI消息类型
 				{
-				case 0x90://音符开
-					/*第一字节（0x000000##）：MIDI消息类型，MIDI通道
-					第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
-					第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
-					SetKeyPressure(b[0] & 0xF, b[1], b[2]);
-					midiOutShortMsg(hMidiOut, midiEvent);
-					break;
-				case 0x80://音符关
-					SetKeyPressure(b[0] & 0xF, b[1], 0);
-					midiOutShortMsg(hMidiOut, midiEvent);
-					break;
-				case 0xA0:
-				case 0xD0:
-					midiOutShortMsg(hMidiOut, midiEvent);
-					break;
-				case 0xC0://音色变换
-					if (pFuncOnProgramChange)
-						pFuncOnProgramChange(b[0] & 0xF, b[1]);
-					midiOutShortMsg(hMidiOut, midiEvent);
-					break;
-				case 0xE0://弯音
-					SetChannelPitchBendFromRaw(b[0] & 0xF, *(PWORD)(b + 1));
-					midiOutShortMsg(hMidiOut, midiEvent);
-					break;
-				case 0xB0://CC控制器
-					switch (b[1])
-					{
-					case 0x65://设置RPN的高位
-						rpn.rpndivided.msb = b[2];
-						break;
-					case 0x64://设置RPN的低位
-						rpn.rpndivided.lsb = b[2];
-						break;
-					case 0x6://向RPN表示的参数高位写入数据
-						if (rpn.rpndivided.msb == 0)//判断RPN高位是不是表示弯音参数
-							SetChannelPitchBendRange(b[0] & 0xF, b[2]);
-						break;
-					/*case 0x26://向RPN表示的参数低位写入数据
-						if (rpn.rpndivided.lsb == 0)//判断RPN低位是不是表示弯音参数
-							SetChannelPitchBendRange(b[0] & 0xF, b[3]);//因为弯音只用了高位字节所以就不用管低位了。
-						break;*/
-					}
-					if (pFuncOnControlChange)
-						pFuncOnControlChange(b[0] & 0xF, b[1], b[2]);
-					midiOutShortMsg(hMidiOut, midiEvent);
+				case 0x80:case 0x90:case 0xA0:case 0xB0:case 0xC0:case 0xD0:case 0xE0:
+					_ProcessMidiShortEvent(midiEvent,true);
 					break;
 				case 0xF0:
 					if (midifile[0][nEvent].isMeta())//不清楚这样行不行
@@ -326,15 +283,11 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 						size_t nMsgSize = midifile[0][nEvent].size();
 						for (size_t i = 0; i < nMsgSize; i++)
 							midiSysExMsg[i] = midifile[0][nEvent][i];
-						if (pFuncOnSysEx)
-							pFuncOnSysEx(midiSysExMsg, nMsgSize);
 						MIDIHDR header{};
 						header.lpData = (LPSTR)midiSysExMsg;
 						header.dwFlags = 0;
 						header.dwBufferLength = nMsgSize;
-						midiOutPrepareHeader(hMidiOut, &header, sizeof(header));
-						midiOutLongMsg(hMidiOut, &header, sizeof(header));
-						midiOutUnprepareHeader(hMidiOut, &header, sizeof(header));
+						_ProcessMidiLongEvent(&header, true);
 					}
 					break;
 				}
@@ -497,4 +450,81 @@ void MidiPlayer::SetChannelEnabled(unsigned channel, bool enabled)
 bool MidiPlayer::GetChannelEnabled(unsigned channel)
 {
 	return channelEnabled[channel];
+}
+
+HMIDIOUT MidiPlayer::GetHandle()
+{
+	return hMidiOut;
+}
+
+void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
+{
+	PBYTE b = (PBYTE)&midiEvent;
+	switch (b[0] & 0xF0)//获取MIDI消息类型
+	{
+	case 0x90://音符开
+		/*第一字节（0x000000##）：MIDI消息类型，MIDI通道
+		第二字节（0x0000##00）：音符编号（0～127，C4音的值为十进制60）
+		第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
+		SetKeyPressure(b[0] & 0xF, b[1], b[2]);
+		if (sendMidiOut)
+			midiOutShortMsg(hMidiOut, midiEvent);
+		break;
+	case 0x80://音符关
+		SetKeyPressure(b[0] & 0xF, b[1], 0);
+		if (sendMidiOut)
+			midiOutShortMsg(hMidiOut, midiEvent);
+		break;
+	case 0xA0:
+	case 0xD0:
+		if (sendMidiOut)
+			midiOutShortMsg(hMidiOut, midiEvent);
+		break;
+	case 0xC0://音色变换
+		if (pFuncOnProgramChange)
+			pFuncOnProgramChange(b[0] & 0xF, b[1]);
+		if (sendMidiOut)
+			midiOutShortMsg(hMidiOut, midiEvent);
+		break;
+	case 0xE0://弯音
+		SetChannelPitchBendFromRaw(b[0] & 0xF, *(PWORD)(b + 1));
+		if (sendMidiOut)
+			midiOutShortMsg(hMidiOut, midiEvent);
+		break;
+	case 0xB0://CC控制器
+		switch (b[1])
+		{
+		case 0x65://设置RPN的高位
+			rpn.rpndivided.msb = b[2];
+			break;
+		case 0x64://设置RPN的低位
+			rpn.rpndivided.lsb = b[2];
+			break;
+		case 0x6://向RPN表示的参数高位写入数据
+			if (rpn.rpndivided.msb == 0)//判断RPN高位是不是表示弯音参数
+				SetChannelPitchBendRange(b[0] & 0xF, b[2]);
+			break;
+			/*case 0x26://向RPN表示的参数低位写入数据
+				if (rpn.rpndivided.lsb == 0)//判断RPN低位是不是表示弯音参数
+					SetChannelPitchBendRange(b[0] & 0xF, b[3]);//因为弯音只用了高位字节所以就不用管低位了。
+				break;*/
+		}
+		if (pFuncOnControlChange)
+			pFuncOnControlChange(b[0] & 0xF, b[1], b[2]);
+		if (sendMidiOut)
+			midiOutShortMsg(hMidiOut, midiEvent);
+		break;
+	}
+}
+
+void MidiPlayer::_ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut)
+{
+	if (pFuncOnSysEx)
+		pFuncOnSysEx((BYTE*)midiHeader->lpData, midiHeader->dwBufferLength);
+	if (sendMidiOut)
+	{
+		midiOutPrepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
+		midiOutLongMsg(hMidiOut, midiHeader, sizeof(*midiHeader));
+		midiOutUnprepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
+	}
 }
