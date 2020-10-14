@@ -10,7 +10,7 @@ MidiPlayer* MidiPlayer::_pObj = nullptr;
 MidiPlayer::MidiPlayer(unsigned deviceID) :sendLongMsg(true), timerID(0), deltaTime(20),
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
 pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nullptr),
-pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr)
+pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr), pFuncOnLyricText(nullptr)
 {
 	if (MidiPlayer::_pObj)delete MidiPlayer::_pObj;
 	MidiPlayer::_pObj = this;
@@ -277,6 +277,8 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 							tempo = (float)midifile[0][nEvent].getTempoBPM();
 						else if (midifile[0][nEvent].data()[1] == 0x58)
 							stepsperbar = midifile[0][nEvent].data()[3];
+						else if (midifile[0][nEvent].isLyricText() && pFuncOnLyricText)
+							pFuncOnLyricText(MIDIMetaStructure(midifile[0][nEvent].data()));
 					}
 					else if (sendLongMsg)
 					{
@@ -419,6 +421,11 @@ void MidiPlayer::SetOnControlChange(MPOnControlChangeFunc f)
 void MidiPlayer::SetOnSysEx(MPOnSysExFunc f)
 {
 	pFuncOnSysEx = f;
+}
+
+void MidiPlayer::SetOnLyricText(MPOnLyricText f)
+{
+	pFuncOnLyricText = f;
 }
 
 void MidiPlayer::SetPlaybackSpeed(float speed)

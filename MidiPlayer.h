@@ -56,7 +56,7 @@ struct MIDIMetaStructure
 		delete pData;
 	}
 	//参考：https://msdn.microsoft.com/library/dd293665.aspx
-	MIDIMetaStructure(MIDIMetaStructure &&other)
+	MIDIMetaStructure(MIDIMetaStructure &&other)noexcept
 	{
 		metaMark = other.metaMark;
 		midiMetaEventType = other.midiMetaEventType;
@@ -70,6 +70,7 @@ typedef void(*MPOnProgramChangeFunc)(BYTE u4_channel, BYTE program);
 typedef void(*MPOnFinishPlayFunc)(void*param);
 typedef void(*MPOnControlChangeFunc)(BYTE u4_channel, BYTE cc, BYTE val);
 typedef void(*MPOnSysExFunc)(PBYTE data, size_t length);
+typedef void(*MPOnLyricText)(const MIDIMetaStructure&);
 
 class MidiPlayer
 {
@@ -137,8 +138,10 @@ public:
 	void SetOnFinishPlay(MPOnFinishPlayFunc, void*);
 	//设置音色变换的回调函数，参数为通道号和音色号
 	void SetOnProgramChange(MPOnProgramChangeFunc);
-	//设置SysEx的回调函数，参数为通道号和音色号
+	//设置SysEx的回调函数，参数为SysEx数据和长度
 	void SetOnSysEx(MPOnSysExFunc);
+	//设置歌词的回调函数，参数为MIDIMetaStructure结构体，其中歌词文本在pData中存储
+	void SetOnLyricText(MPOnLyricText);
 	//设置CC变换的回调函数，参数为通道号，CC控制器编号，值
 	void SetOnControlChange(MPOnControlChangeFunc);
 	//设置播放速度
@@ -166,6 +169,7 @@ private:
 	MPOnProgramChangeFunc pFuncOnProgramChange;
 	MPOnControlChangeFunc pFuncOnControlChange;
 	MPOnSysExFunc pFuncOnSysEx;
+	MPOnLyricText pFuncOnLyricText;
 	bool sendLongMsg;
 	float nextTick;
 	float loopStartTick;
