@@ -1,16 +1,18 @@
 ﻿#include "MidiPlayer.h"
-#include "MidiPlayer.h"
+#include "vstplugin.h"
+#include "SoundFontPlayer.h"
 #include <fstream>
 #include <sstream>
 
 #define INIT_ARRAY(pointer,n,var) for(size_t i=0;i<(n);i++)(pointer)[i]=(var)
+#define DELETE_PTR(p) delete p;p=nullptr
 
 MidiPlayer* MidiPlayer::_pObj = nullptr;
 
-MidiPlayer::MidiPlayer(unsigned deviceID) :sendLongMsg(true), timerID(0), deltaTime(20),
+MidiPlayer::MidiPlayer(unsigned _deviceID,void*extraInfo) :sendLongMsg(true), timerID(0), deltaTime(20),
 midiSysExMsg(nullptr), nMaxSysExMsg(256), nChannels(16), nKeys(128), rpn({ 255,255 }),
 pFuncOnFinishPlay(nullptr), paramOnFinishPlay(nullptr), pFuncOnProgramChange(nullptr),
-pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr), pFuncOnLyricText(nullptr)
+pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr), pFuncOnLyricText(nullptr),pluginPlayer(nullptr),initResult(0)
 {
 	if (MidiPlayer::_pObj)delete MidiPlayer::_pObj;
 	MidiPlayer::_pObj = this;
@@ -20,21 +22,60 @@ pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr), pFuncOnLyricText(nullptr)
 	channelPitchSensitivity = new unsigned char[nChannels];
 	channelEnabled = new bool[nChannels];
 	VarReset();
-	midiOutOpen(&hMidiOut, deviceID, 0, 0, 0);
-	SetVolume(MIDIPLAYER_MAX_VOLUME);
+	deviceID = _deviceID;
+	switch (deviceID)
+	{
+	case MIDI_DEVICE_USE_VST_PLUGIN:
+		pluginPlayer = new VstPlugin;
+		if (pluginPlayer->LoadPlugin((LPCTSTR)extraInfo, 44100))
+		{
+			DELETE_PTR(pluginPlayer);
+			initResult = -1;
+			return;
+		}
+		pluginPlayer->StartPlayback(2, 44100);
+		break;
+	case MIDI_DEVICE_USE_SOUNDFONT2:
+		//TODO
+		initResult = -1;
+		return;
+		break;
+	default:
+		if (midiOutOpen(&hMidiOut, deviceID, 0, 0, 0) != MMSYSERR_NOERROR)
+			throw deviceID;
+		SetVolume(MIDIPLAYER_MAX_VOLUME);
+		break;
+	}
 }
 
 MidiPlayer::~MidiPlayer()
 {
 	Stop();
 	Unload();
-	midiOutClose(hMidiOut);
+	if (pluginPlayer)
+	{
+		pluginPlayer->StopPlayback();
+		pluginPlayer->ReleasePlugin();
+		DELETE_PTR(pluginPlayer);
+	}
+	else
+	{
+		midiOutClose(hMidiOut);
+	}
 	delete[]channelEnabled;
 	delete[]channelPitchSensitivity;
 	delete[]channelPitchBend;
 	delete[]keyPressure;
 	delete[]midiSysExMsg;
 	MidiPlayer::_pObj = nullptr;
+}
+
+void MidiPlayer::MidiOutShortMsgDispatch(DWORD midiEvent)
+{
+	if (pluginPlayer)
+		pluginPlayer->SendMidiData(midiEvent);
+	else
+		midiOutShortMsg(hMidiOut, midiEvent);
 }
 
 void MidiPlayer::VarReset(bool doStop)
@@ -166,7 +207,14 @@ void MidiPlayer::Pause(bool panic)
 void MidiPlayer::Panic(unsigned channel, bool resetkeyboard)
 {
 	int midiData = 0x00007BB0 | (channel & 0xF);
-	midiOutShortMsg(hMidiOut, midiData);
+	if (pluginPlayer)
+	{
+		pluginPlayer->SendMidiData(midiData);
+	}
+	else
+	{
+		midiOutShortMsg(hMidiOut, midiData);
+	}
 	if (resetkeyboard)
 	{
 		for (unsigned i = 0; i < nKeys; i++)
@@ -186,7 +234,16 @@ void MidiPlayer::Stop(bool bResetMidi)
 	polyphone = 0;
 	dropEventsCount = 0;
 	if (bResetMidi)
-		midiOutReset(hMidiOut);
+	{
+		if (pluginPlayer)
+		{
+			/* HOW TO DO THIS??? */
+		}
+		else
+		{
+			midiOutReset(hMidiOut);
+		}
+	}
 	SetPos(0.0f);
 	ZeroMemory(keyPressure, nChannels*nKeys*sizeof(*keyPressure));
 	INIT_ARRAY(channelPitchBend, nChannels, 0x2000);
@@ -218,8 +275,15 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd, bool includeLeft, bool in
 
 void MidiPlayer::SetVolume(unsigned v)
 {
-	//https://msdn.microsoft.com/zh-cn/library/windows/desktop/dd798480.aspx
-	midiOutSetVolume(hMidiOut, MAKELONG(0xFFFF * v / MIDIPLAYER_MAX_VOLUME, 0xFFFF * v / MIDIPLAYER_MAX_VOLUME));
+	if (pluginPlayer)
+	{
+		pluginPlayer->SetVolume(v / 100.0f);
+	}
+	else
+	{
+		//https://msdn.microsoft.com/zh-cn/library/windows/desktop/dd798480.aspx
+		midiOutSetVolume(hMidiOut, MAKELONG(0xFFFF * v / MIDIPLAYER_MAX_VOLUME, 0xFFFF * v / MIDIPLAYER_MAX_VOLUME));
+	}
 }
 
 bool MidiPlayer::SetPos(float pos)
@@ -475,28 +539,28 @@ void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
 		第三字节（0x00##0000）：速度（强度，Velocity，0～127，0=音符关）*/
 		SetKeyPressure(b[0] & 0xF, b[1], b[2]);
 		if (sendMidiOut)
-			midiOutShortMsg(hMidiOut, midiEvent);
+			MidiOutShortMsgDispatch(midiEvent);
 		break;
 	case 0x80://音符关
 		SetKeyPressure(b[0] & 0xF, b[1], 0);
 		if (sendMidiOut)
-			midiOutShortMsg(hMidiOut, midiEvent);
+			MidiOutShortMsgDispatch(midiEvent);
 		break;
 	case 0xA0:
 	case 0xD0:
 		if (sendMidiOut)
-			midiOutShortMsg(hMidiOut, midiEvent);
+			MidiOutShortMsgDispatch(midiEvent);
 		break;
 	case 0xC0://音色变换
 		if (pFuncOnProgramChange)
 			pFuncOnProgramChange(b[0] & 0xF, b[1]);
 		if (sendMidiOut)
-			midiOutShortMsg(hMidiOut, midiEvent);
+			MidiOutShortMsgDispatch(midiEvent);
 		break;
 	case 0xE0://弯音
 		SetChannelPitchBendFromRaw(b[0] & 0xF, *(PWORD)(b + 1));
 		if (sendMidiOut)
-			midiOutShortMsg(hMidiOut, midiEvent);
+			MidiOutShortMsgDispatch(midiEvent);
 		break;
 	case 0xB0://CC控制器
 		switch (b[1])
@@ -519,7 +583,7 @@ void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
 		if (pFuncOnControlChange)
 			pFuncOnControlChange(b[0] & 0xF, b[1], b[2]);
 		if (sendMidiOut)
-			midiOutShortMsg(hMidiOut, midiEvent);
+			MidiOutShortMsgDispatch(midiEvent);
 		break;
 	}
 }
@@ -530,8 +594,30 @@ void MidiPlayer::_ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut)
 		pFuncOnSysEx((BYTE*)midiHeader->lpData, midiHeader->dwBufferLength);
 	if (sendMidiOut)
 	{
-		midiOutPrepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
-		midiOutLongMsg(hMidiOut, midiHeader, sizeof(*midiHeader));
-		midiOutUnprepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
+		if (pluginPlayer)
+		{
+			pluginPlayer->SendSysExData(midiHeader->lpData, midiHeader->dwBufferLength);
+		}
+		else
+		{
+			midiOutPrepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
+			midiOutLongMsg(hMidiOut, midiHeader, sizeof(*midiHeader));
+			midiOutUnprepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
+		}
 	}
+}
+
+UINT MidiPlayer::GetDeviceID()
+{
+	return deviceID;
+}
+
+PluginWithXAudio2Playback* MidiPlayer::GetPlugin()
+{
+	return pluginPlayer;
+}
+
+int MidiPlayer::GetInitResult()
+{
+	return initResult;
 }

@@ -18,9 +18,30 @@
     <ClCompile Include="MidiPlayer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="XAudio2Player.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="vstplugin.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PluginWithXAudio2Playback.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MidiPlayer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="vstplugin.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="XAudio2Player.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundFontPlayer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginWithXAudio2Playback.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

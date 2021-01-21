@@ -168,9 +168,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MidiPlayer.cpp" />
+    <ClCompile Include="PluginWithXAudio2Playback.cpp" />
+    <ClCompile Include="vstplugin.cpp" />
+    <ClCompile Include="XAudio2Player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MidiPlayer.h" />
+    <ClInclude Include="PluginWithXAudio2Playback.h" />
+    <ClInclude Include="SoundFontPlayer.h" />
+    <ClInclude Include="vstplugin.h" />
+    <ClInclude Include="XAudio2Player.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="midifile.vcxproj">

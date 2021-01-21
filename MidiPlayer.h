@@ -1,10 +1,17 @@
 ﻿#pragma once
+#if _MSC_VER<1900
+#define noexcept
+#endif
 #include"MidiFile.h"
+#include"PluginWithXAudio2Playback.h"
 #include<Windows.h>
 #include<sstream>
 #include<list>
 
 #define MIDIPLAYER_MAX_VOLUME 100u
+#define MIDI_DEVICE_USE_VST_PLUGIN (UINT)-2
+#define MIDI_DEVICE_USE_SOUNDFONT2 (UINT)-3
+
 
 using namespace smf;
 
@@ -76,7 +83,8 @@ class MidiPlayer
 {
 public:
 	//创建一个 MidiPlayer 类型的对象，参数为 MIDI 设备序号（从0算起），默认值为 MIDI_MAPPER
-	MidiPlayer(unsigned deviceID = MIDI_MAPPER);
+	//如果deviceID为MIDI_DEVICE_USE_VST_PLUGIN或MIDI_DEVICE_USE_SOUNDFONT2，则需要在extraInfo中指定插件或文件路径
+	MidiPlayer(unsigned deviceID = MIDI_MAPPER, void* extraInfo = NULL);
 	//释放对象
 	~MidiPlayer();
 	//加载文件，如果失败返回 false，否则为 true
@@ -156,10 +164,14 @@ public:
 	HMIDIOUT GetHandle();
 	void _ProcessMidiShortEvent(DWORD midiEvent,bool sendMidiOut);
 	void _ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut);
+	UINT GetDeviceID();
+	PluginWithXAudio2Playback* GetPlugin();
+	int GetInitResult();
 protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
+	void MidiOutShortMsgDispatch(DWORD midiEvent);
 	void VarReset(bool = true);
 	void SetKeyPressure(unsigned, unsigned, unsigned char);
 	void SetChannelPitchBendFromRaw(unsigned, unsigned short);
@@ -202,4 +214,8 @@ private:
 	UINT timerInterval;
 	std::vector<int> _mfNextTickEvents;
 	int dropEventsCount;
+	UINT deviceID;
+	int initResult;
+
+	PluginWithXAudio2Playback* pluginPlayer;
 };
