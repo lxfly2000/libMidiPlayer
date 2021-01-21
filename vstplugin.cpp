@@ -12,7 +12,7 @@
 //https://blog.csdn.net/neo_yin/article/details/7354018
 extern "C"{
 // Main host callback
-VstIntPtr VSTCALLBACK hostCallback(AEffect* effect, VstInt32 opcode, VstInt32 index, VstInt32 value, void* ptr, float opt)
+VstIntPtr VSTCALLBACK hostCallback(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt)
 {
     switch (opcode) {
     case audioMasterVersion:
@@ -54,6 +54,8 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
         return -1;
 
     vstPluginFuncPtr mainEntryPoint = (vstPluginFuncPtr)GetProcAddress(g_modulePtr, "VSTPluginMain");
+    if (mainEntryPoint == nullptr)
+        mainEntryPoint = (vstPluginFuncPtr)GetProcAddress(g_modulePtr, "main");
     // Instantiate the plugin
     g_plugin = mainEntryPoint(hostCallback);
 
@@ -79,10 +81,10 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
     g_dispatcher(g_plugin, effSetBlockSize, 0, blocksize, NULL, 0.0f);
 
     // Resume plugin
-    g_dispatcher(g_plugin, effMainsChanged, 0, 1, NULL, 0.0f);
+    //g_dispatcher(g_plugin, effMainsChanged, 0, 1, NULL, 0.0f);
 
 
-    ShowPluginWindow(false);
+    //ShowPluginWindow(false);
     return 0;
 }
 
@@ -116,7 +118,10 @@ void processAudio(AEffect* plugin, float** inputs, float** outputs, long numFram
     // channels first to avoid any accidental noise. If you are processing an effect, you
     // should probably zero the values in the output channels. See the silenceChannel()
     // method below.
-    plugin->processReplacing(plugin, inputs, outputs, numFrames);
+    if (plugin->__processDeprecated)
+        plugin->__processDeprecated(plugin, inputs, outputs, numFrames);
+    else
+        plugin->processReplacing(plugin, inputs, outputs, numFrames);
 }
 
 void silenceChannel(float** channelData, int numChannels, long numFrames) {
@@ -148,7 +153,7 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
     VstMidiSysexEvent ve{};
     ve.type = kVstMidiType;
     ve.byteSize = sizeof(ve);
-    ve.deltaFrames = 0;
+    ve.deltaFrames = 2000;
     ve.flags = kVstMidiEventIsRealtime;
     ve.dumpBytes = length;
     memcpy(ve.sysexDump, data, length);
