@@ -152,6 +152,7 @@ void VstPlugin::_Playback()
 {
     UINT buffer_time_ms = GetPrivateProfileInt(TEXT("XAudio2"), TEXT(KEYNAME_BUFFER_LENGTH), VDEFAULT_BUFFER_LENGTH, TEXT(".\\VisualMIDIPlayer.ini"));
     size_t bytesof_soundBuffer = player.GetSampleRate() * player.GetChannelCount() * player.GetBytesPerVar() * buffer_time_ms / 1000;
+    ATLASSERT(player.GetBytesPerVar() == 2);//因为下面要用short类型，必须得确认这里是2
     short* buffer = reinterpret_cast<short*>(new BYTE[bytesof_soundBuffer]);
 
     size_t singleChSamples = player.GetSampleRate() * buffer_time_ms / 1000;
@@ -169,7 +170,6 @@ void VstPlugin::_Playback()
 			vsthost.EffProcess(nEffect, pfChannels.data(), pfChannels.data(), singleChSamples);
         for (size_t i = 0; i < singleChSamples; i++)
         {
-            //此处必须保证bytesPerVar是4
             for (int j = 0; j < player.GetChannelCount(); j++)
             {
                 //某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
