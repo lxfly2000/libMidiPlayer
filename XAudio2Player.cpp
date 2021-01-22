@@ -1,17 +1,5 @@
 #include "XAudio2Player.h"
 
-#ifdef _M_X64
-#pragma comment(lib,"XAudio2_8/Lib/winv6.3/um/x64/XAudio2.lib")
-#elif defined(_M_ARM)
-#pragma comment(lib,"XAudio2_8/Lib/winv6.3/um/arm/XAudio2.lib")
-#elif defined(_M_ARM64)
-#error "The ARM64 architecture is not supported yet."
-#elif defined(_M_IX86)
-#pragma comment(lib,"XAudio2_8/Lib/winv6.3/um/x86/XAudio2.lib")
-#else
-#error "XAudio2 doesn't support this platform."
-#endif
-
 
 XASCallback::XASCallback()
 {

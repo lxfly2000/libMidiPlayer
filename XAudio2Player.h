@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../XAudio2_8/Include/um/xaudio2.h"
+#include "XAudio2_8/Include/um/xaudio2.h"
 
 class XASCallback :public IXAudio2VoiceCallback
 {
