@@ -89,7 +89,8 @@ void VstPlugin::_Playback()
 
     size_t singleChSamples = player.GetSampleRate() * buffer_time_ms / 1000;
     std::vector<float*>pfChannels;
-    for (int i = 0; i < player.GetChannelCount(); i++)
+    long numOutputs = vsthost.GetAt(nEffect)->pEffect->numOutputs;//通道数必须至少为该参数的数值，否则极有可能报错
+    for (int i = 0; i < numOutputs; i++)
         pfChannels.push_back(new float[singleChSamples]);
     while (isPlayingBack)
     {
@@ -108,7 +109,7 @@ void VstPlugin::_Playback()
         player.Play((BYTE*)buffer, bytesof_soundBuffer);
         player.WaitForBufferEndEvent();
     }
-    for (int i = 0; i < player.GetChannelCount(); i++)
+    for (int i = 0; i < numOutputs; i++)
         delete[]pfChannels[i];
     delete[]buffer;
 }
