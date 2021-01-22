@@ -171,7 +171,10 @@ void VstPlugin::_Playback()
         {
             //此处必须保证bytesPerVar是4
             for (int j = 0; j < player.GetChannelCount(); j++)
-                buffer[player.GetChannelCount() * i + j] = pfChannels[j][i] * 32767;
+            {
+                //某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
+                buffer[player.GetChannelCount() * i + j] = (short)(min(max(-32768.f, pfChannels[j][i] * 32767.f), 32767.f));
+            }
         }
         player.Play((BYTE*)buffer, bytesof_soundBuffer);
         player.WaitForBufferEndEvent();
