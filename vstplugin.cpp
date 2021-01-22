@@ -89,19 +89,25 @@ int VstPlugin::ShowPluginWindow(bool show)
 {
     if (show)
     {
-        ShowWindow(hwndForVst, SW_SHOW);
-        vsthost.EffEditOpen(nEffect, hwndForVst);
-        ERect effrect;
-        ERect* peffrect = &effrect;
-        vsthost.EffEditGetRect(nEffect, &peffrect);
-        RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
-        AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, NULL);
-        SetWindowPos(hwndForVst, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
+        if (!IsPluginWindowShown())
+        {
+            ShowWindow(hwndForVst, SW_SHOW);
+            vsthost.EffEditOpen(nEffect, hwndForVst);
+            ERect effrect;
+            ERect* peffrect = &effrect;
+            vsthost.EffEditGetRect(nEffect, &peffrect);
+            RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
+            AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, NULL);
+            SetWindowPos(hwndForVst, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
+        }
     }
     else
     {
-        vsthost.EffEditClose(nEffect);
-        ShowWindow(hwndForVst, SW_HIDE);
+        if (IsPluginWindowShown())
+        {
+            vsthost.EffEditClose(nEffect);
+            ShowWindow(hwndForVst, SW_HIDE);
+        }
     }
     return 0;
 }
@@ -134,7 +140,7 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
     ve.deltaFrames = 2000;
     ve.flags = kVstMidiEventIsRealtime;
     ve.dumpBytes = length;
-    memcpy(ve.sysexDump, data, length);
+    ve.sysexDump = (char*)data;
     VstEvents ves{};
     ves.numEvents = 1;
     ves.events[0] = (VstEvent*)&ve;
