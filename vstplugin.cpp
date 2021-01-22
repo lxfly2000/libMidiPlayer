@@ -12,6 +12,7 @@
 
 CVSTHost VstPlugin::vsthost;
 
+#define ALWAYS_ON_TOP 1
 
 int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
 {
@@ -36,22 +37,42 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
     RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
     WNDCLASSEX wcex{ sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW ,[](HWND hwnd,UINT msg,WPARAM w,LPARAM l)
         {
-            if (msg == WM_CLOSE)
+            switch (msg)
             {
+            case WM_CREATE:
+                AppendMenu(GetSystemMenu(hwnd, FALSE), MF_STRING | MF_CHECKED, ALWAYS_ON_TOP, TEXT("置顶显示(&A)"));
+                break;
+            case WM_CLOSE:
                 ((VstPlugin*)GetWindowLongPtr(hwnd,GWLP_USERDATA))->ShowPluginWindow(false);
                 return (LRESULT)0;
+            case WM_SYSCOMMAND:
+                if (w == ALWAYS_ON_TOP)
+                {
+                    DWORD exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                    UINT flags = MF_BYCOMMAND;
+                    if (exStyle & WS_EX_TOPMOST)
+                    {
+                        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                    }
+                    else
+                    {
+                        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                        flags |= MF_CHECKED;
+                    }
+                    ModifyMenu(GetSystemMenu(hwnd, FALSE), ALWAYS_ON_TOP, flags, ALWAYS_ON_TOP, TEXT("置顶显示(&A)"));
+                }
+                break;
             }
             return DefWindowProc(hwnd,msg,w,l);
     }};
     wcex.lpszClassName = TEXT("VSTWindow");
     RegisterClassEx(&wcex);
-    DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    AdjustWindowRectEx(&rect, style, FALSE, NULL);
-    hwndForVst = CreateWindowEx(NULL, wcex.lpszClassName, A2W(effname), style, CW_USEDEFAULT, CW_USEDEFAULT,
+    DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, exStyle = WS_EX_TOPMOST;
+    AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+    hwndForVst = CreateWindowEx(exStyle, wcex.lpszClassName, A2W(effname), style, CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, NULL, NULL);
     SetWindowLongPtr(hwndForVst, GWLP_USERDATA, (LONG_PTR)this);
     DWORD e = GetLastError();
-    ShowPluginWindow(true);
     return 0;
 }
 
@@ -75,7 +96,7 @@ int VstPlugin::ShowPluginWindow(bool show)
         vsthost.EffEditGetRect(nEffect, &peffrect);
         RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
         AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, NULL);
-        SetWindowPos(hwndForVst, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE);
+        SetWindowPos(hwndForVst, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
     }
     else
     {
@@ -129,7 +150,7 @@ void VstPlugin::_Playback()
 
     size_t singleChSamples = player.GetSampleRate() * buffer_time_ms / 1000;
     std::vector<float*>pfChannels;
-    long numOutputs = vsthost.GetAt(nEffect)->pEffect->numOutputs;//通道数必须至少为该参数的数值，否则极有可能报错
+    long numOutputs = max(player.GetChannelCount(), vsthost.GetAt(nEffect)->pEffect->numOutputs);//通道数必须至少为该参数的数值，否则极有可能报错
     for (int i = 0; i < numOutputs; i++)
         pfChannels.push_back(new float[singleChSamples]);
     while (isPlayingBack)

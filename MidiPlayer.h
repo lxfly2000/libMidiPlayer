@@ -6,8 +6,8 @@
 #include<list>
 
 #define MIDIPLAYER_MAX_VOLUME 100u
-#define MIDI_DEVICE_USE_VST_PLUGIN (UINT)-2
-#define MIDI_DEVICE_USE_SOUNDFONT2 (UINT)-3
+#define MIDI_DEVICE_USE_VST_PLUGIN (UINT)-3
+#define MIDI_DEVICE_USE_SOUNDFONT2 (UINT)-4
 
 
 using namespace smf;
