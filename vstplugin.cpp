@@ -137,7 +137,7 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
     VstMidiSysexEvent ve{};
     ve.type = kVstMidiType;
     ve.byteSize = sizeof(ve);
-    ve.deltaFrames = 2000;
+    ve.deltaFrames = 0;
     ve.flags = kVstMidiEventIsRealtime;
     ve.dumpBytes = length;
     ve.sysexDump = (char*)data;
