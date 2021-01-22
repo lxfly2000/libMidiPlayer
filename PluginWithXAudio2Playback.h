@@ -18,7 +18,7 @@ public:
 	virtual int SendMidiData(DWORD midiData) = 0;
 	virtual int SendSysExData(LPVOID data,DWORD length) = 0;
 protected:
-	XAudio2Player player;
+	static XAudio2Player player;
 	int isPlayingBack;//0表示停止，1表示正在播放音频流
 	std::thread threadPlayback;
 };

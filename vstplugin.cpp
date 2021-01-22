@@ -3,6 +3,7 @@
 
 #include "vstplugin.h"
 #include <vector>
+#include <atlconv.h>
 
 #define KEYNAME_BUFFER_LENGTH	"BufferTime"
 #define VDEFAULT_BUFFER_LENGTH	20
@@ -26,22 +27,61 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
 	vsthost.EffResume(nEffect);
 
 
-    ShowPluginWindow(false);
+    USES_CONVERSION;
+    char effname[256];
+    ERect effrect;
+    ERect* peffrect = &effrect;
+    vsthost.EffGetEffectName(nEffect, effname);
+    vsthost.EffEditGetRect(nEffect, &peffrect);
+    RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
+    WNDCLASSEX wcex{ sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW ,[](HWND hwnd,UINT msg,WPARAM w,LPARAM l)
+        {
+            if (msg == WM_CLOSE)
+            {
+                ((VstPlugin*)GetWindowLongPtr(hwnd,GWLP_USERDATA))->ShowPluginWindow(false);
+                return (LRESULT)0;
+            }
+            return DefWindowProc(hwnd,msg,w,l);
+    }};
+    wcex.lpszClassName = TEXT("VSTWindow");
+    RegisterClassEx(&wcex);
+    DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+    AdjustWindowRectEx(&rect, style, FALSE, NULL);
+    hwndForVst = CreateWindowEx(NULL, wcex.lpszClassName, A2W(effname), style, CW_USEDEFAULT, CW_USEDEFAULT,
+        rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, NULL, NULL);
+    SetWindowLongPtr(hwndForVst, GWLP_USERDATA, (LONG_PTR)this);
+    DWORD e = GetLastError();
+    ShowPluginWindow(true);
     return 0;
 }
 
 int VstPlugin::ReleasePlugin()
 {
+    ShowPluginWindow(false);
+    DestroyWindow(hwndForVst);
+    hwndForVst = nullptr;
 	vsthost.RemoveAll();
     return 0;
 }
 
 int VstPlugin::ShowPluginWindow(bool show)
 {
-	if (show)
-		vsthost.EffEditOpen(nEffect, nullptr);
-	else
-		vsthost.EffEditClose(nEffect);
+    if (show)
+    {
+        ShowWindow(hwndForVst, SW_SHOW);
+        vsthost.EffEditOpen(nEffect, hwndForVst);
+        ERect effrect;
+        ERect* peffrect = &effrect;
+        vsthost.EffEditGetRect(nEffect, &peffrect);
+        RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
+        AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, NULL);
+        SetWindowPos(hwndForVst, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE);
+    }
+    else
+    {
+        vsthost.EffEditClose(nEffect);
+        ShowWindow(hwndForVst, SW_HIDE);
+    }
     return 0;
 }
 

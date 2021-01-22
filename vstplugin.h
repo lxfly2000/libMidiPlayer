@@ -14,4 +14,5 @@ public:
 private:
 	static CVSTHost vsthost;//Singleton
 	int nEffect;
+	HWND hwndForVst;
 };

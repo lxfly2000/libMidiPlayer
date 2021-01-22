@@ -1,5 +1,7 @@
 #include "PluginWithXAudio2Playback.h"
 
+XAudio2Player PluginWithXAudio2Playback::player;
+
 void PluginWithXAudio2Playback::SetVolume(float v)
 {
 	player.SetVolume(v);
