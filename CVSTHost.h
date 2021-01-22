@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #error "This file was modified to be specific to Windows only."
 #endif
 
-#include "VST_SDK_2.4/public.sdk/source/vst2.x/audioeffectx.h"               /* VST header files                  */
+#include "VST_SDK/VST2_SDK/public.sdk/source/vst2.x/audioeffectx.h"               /* VST header files                  */
 
 #if defined(VST_2_4_EXTENSIONS)
 #else
@@ -233,7 +233,7 @@ enum VstAutomationStates                /* V2.4 automation state definitions */
 #endif
 
 #if defined(VST_2_4_EXTENSIONS)
-#include "VST_SDK_2.4/public.sdk/source/vst2.x/aeffeditor.h"
+#include "VST_SDK/VST2_SDK/public.sdk/source/vst2.x/aeffeditor.h"
 #else
 #include "AEffEditor.hpp"
 #endif
