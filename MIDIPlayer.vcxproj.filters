@@ -27,6 +27,9 @@
     <ClCompile Include="PluginWithXAudio2Playback.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CVSTHost.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MidiPlayer.h">
@@ -42,6 +45,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="PluginWithXAudio2Playback.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CVSTHost.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,7 +1,4 @@
 ﻿#pragma once
-#if _MSC_VER<1900
-#define noexcept
-#endif
 #include"MidiFile.h"
 #include"PluginWithXAudio2Playback.h"
 #include<Windows.h>
@@ -63,7 +60,7 @@ struct MIDIMetaStructure
 		delete pData;
 	}
 	//参考：https://msdn.microsoft.com/library/dd293665.aspx
-	MIDIMetaStructure(MIDIMetaStructure &&other)noexcept
+	MIDIMetaStructure(MIDIMetaStructure &&other)
 	{
 		metaMark = other.metaMark;
 		midiMetaEventType = other.midiMetaEventType;

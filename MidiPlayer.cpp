@@ -1,4 +1,6 @@
-﻿#include "MidiPlayer.h"
+﻿#define _CRT_SECURE_NO_WARNINGS
+
+#include "MidiPlayer.h"
 #include "vstplugin.h"
 #include "SoundFontPlayer.h"
 #include <fstream>
