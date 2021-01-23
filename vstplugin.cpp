@@ -1,3 +1,5 @@
+//本人技术有限，该功能对部分VST插件支持效果不好，具体表现有MIDI延迟、部分插件无声音等
+
 #define _CRT_SECURE_NO_WARNINGS
 
 
@@ -35,7 +37,7 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
 
     vsthost.EffMainsChanged(nEffect, true);
     vsthost.EffStartProcess(nEffect);
-	vsthost.EffResume(nEffect);
+    vsthost.EffResume(nEffect);
 
     USES_CONVERSION;
     char effname[256];
@@ -50,6 +52,10 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
             {
             case WM_CREATE:
                 AppendMenu(GetSystemMenu(hwnd, FALSE), MF_STRING | MF_CHECKED, ALWAYS_ON_TOP, TEXT("置顶显示(&A)"));
+                SetTimer(hwnd, 1, 20, NULL);
+                break;
+            case WM_DESTROY:
+                KillTimer(hwnd, 1);
                 break;
             case WM_CLOSE:
                 ((VstPlugin*)GetWindowLongPtr(hwnd,GWLP_USERDATA))->ShowPluginWindow(false);
@@ -70,6 +76,9 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
                     }
                     ModifyMenu(GetSystemMenu(hwnd, FALSE), ALWAYS_ON_TOP, flags, ALWAYS_ON_TOP, TEXT("置顶显示(&A)"));
                 }
+                break;
+            case WM_TIMER:
+                ((VstPlugin*)GetWindowLongPtr(hwnd, GWLP_USERDATA))->OnIdle();
                 break;
             }
             return DefWindowProc(hwnd,msg,w,l);
@@ -107,10 +116,10 @@ int VstPlugin::ShowPluginWindow(bool show)
         {
             ShowWindow(hwndForVst, SW_SHOW);
             vsthost.EffEditOpen(nEffect, hwndForVst);
-            ERect effrect;
-            ERect* peffrect = &effrect;
+            ERect* peffrect = NULL;
             vsthost.EffEditGetRect(nEffect, &peffrect);
-            vsthost.OnSizeWindow(nEffect, peffrect->right - peffrect->left, peffrect->bottom - peffrect->top);
+            if (peffrect)
+                vsthost.OnSizeWindow(nEffect, peffrect->right - peffrect->left, peffrect->bottom - peffrect->top);
         }
     }
     else
@@ -134,7 +143,7 @@ int VstPlugin::SendMidiData(DWORD midiData)
     VstMidiEvent ve{};
     ve.type = kVstMidiType;
     ve.byteSize = sizeof(ve);
-    ve.deltaFrames = 0;//这个属性有什么用？
+    ve.deltaFrames = 0;
     ve.flags = kVstMidiEventIsRealtime;
     memcpy(ve.midiData, &midiData, sizeof(ve.midiData));
     VstEvents ves{};
@@ -160,6 +169,12 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
     return 0;
 }
 
+void VstPlugin::OnIdle()
+{
+    vsthost.EffIdle(nEffect);
+    vsthost.EffEditIdle(nEffect);
+}
+
 void VstPlugin::_Playback()
 {
     UINT buffer_time_ms = GetPrivateProfileInt(TEXT("XAudio2"), TEXT(KEYNAME_BUFFER_LENGTH), VDEFAULT_BUFFER_LENGTH, TEXT(".\\VisualMIDIPlayer.ini"));
@@ -168,30 +183,35 @@ void VstPlugin::_Playback()
     short* buffer = reinterpret_cast<short*>(new BYTE[bytesof_soundBuffer]);
 
     size_t singleChSamples = player.GetSampleRate() * buffer_time_ms / 1000;
-    std::vector<float*>pfChannels;
+    std::vector<float*>pfChannelsIn,pfChannelsOut;
+    long numInputs = max(player.GetChannelCount(), vsthost.GetAt(nEffect)->pEffect->numInputs);
     long numOutputs = max(player.GetChannelCount(), vsthost.GetAt(nEffect)->pEffect->numOutputs);//通道数必须至少为该参数的数值，否则极有可能报错
+    for (int i = 0; i < numInputs; i++)
+        pfChannelsIn.push_back(new float[singleChSamples]);
     for (int i = 0; i < numOutputs; i++)
-        pfChannels.push_back(new float[singleChSamples]);
+        pfChannelsOut.push_back(new float[singleChSamples]);
     while (isPlayingBack)
     {
-		for (int i = 0; i < player.GetChannelCount(); i++)
-			ZeroMemory(pfChannels[i], singleChSamples*sizeof(float));
+		for (int i = 0; i < numInputs; i++)
+			ZeroMemory(pfChannelsIn[i], singleChSamples*sizeof(float));
 		if (vsthost.GetAt(nEffect)->pEffect->flags&effFlagsCanReplacing)
-			vsthost.EffProcessReplacing(nEffect, pfChannels.data(), pfChannels.data(), singleChSamples);
+			vsthost.EffProcessReplacing(nEffect, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
 		else
-			vsthost.EffProcess(nEffect, pfChannels.data(), pfChannels.data(), singleChSamples);
+			vsthost.EffProcess(nEffect, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
         for (size_t i = 0; i < singleChSamples; i++)
         {
             for (int j = 0; j < player.GetChannelCount(); j++)
             {
                 //某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
-                buffer[player.GetChannelCount() * i + j] = (short)(min(max(-32768.f, pfChannels[j][i] * 32767.f), 32767.f));
+                buffer[player.GetChannelCount() * i + j] = (short)(min(max(-32768.f, pfChannelsOut[j][i] * 32767.f), 32767.f));
             }
         }
         player.Play((BYTE*)buffer, bytesof_soundBuffer);
         player.WaitForBufferEndEvent();
     }
+    for (int i = 0; i < numInputs; i++)
+        delete[]pfChannelsIn[i];
     for (int i = 0; i < numOutputs; i++)
-        delete[]pfChannels[i];
+        delete[]pfChannelsOut[i];
     delete[]buffer;
 }

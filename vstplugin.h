@@ -16,6 +16,7 @@ public:
 	void _Playback()override;
 	int SendMidiData(DWORD midiData)override;
 	int SendSysExData(LPVOID data, DWORD length)override;
+	void OnIdle();
 private:
 	static VstPluginHost vsthost;//Singleton
 	int nEffect;
