@@ -177,7 +177,7 @@
     <ClInclude Include="CVSTHost.h" />
     <ClInclude Include="MidiPlayer.h" />
     <ClInclude Include="PluginWithXAudio2Playback.h" />
-    <ClInclude Include="SoundFontPlayer.h" />
+    <ClInclude Include="SF2Plugin.h" />
     <ClInclude Include="vstplugin.h" />
     <ClInclude Include="XAudio2Player.h" />
   </ItemGroup>

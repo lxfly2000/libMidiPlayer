@@ -2,7 +2,7 @@
 
 #include "MidiPlayer.h"
 #include "vstplugin.h"
-#include "SoundFontPlayer.h"
+#include "SF2Plugin.h"
 #include <fstream>
 #include <sstream>
 

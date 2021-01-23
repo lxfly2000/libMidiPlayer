@@ -41,13 +41,13 @@
     <ClInclude Include="XAudio2Player.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="SoundFontPlayer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="PluginWithXAudio2Playback.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="CVSTHost.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SF2Plugin.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
