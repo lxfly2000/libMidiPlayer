@@ -1,6 +1,11 @@
 #pragma once
 #include "PluginWithXAudio2Playback.h"
 #include "CVSTHost.h"
+class VstPluginHost :public CVSTHost
+{
+public:
+	bool OnSizeWindow(int nEffect, long width, long height)override;
+};
 class VstPlugin:public PluginWithXAudio2Playback
 {
 public:
@@ -12,7 +17,7 @@ public:
 	int SendMidiData(DWORD midiData)override;
 	int SendSysExData(LPVOID data, DWORD length)override;
 private:
-	static CVSTHost vsthost;//Singleton
+	static VstPluginHost vsthost;//Singleton
 	int nEffect;
 	HWND hwndForVst;
 };
