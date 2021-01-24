@@ -10,47 +10,73 @@
 #include <MidiFile.h>
 
 #include "SDKWaveFile.h"
+#include "CVSTHost/source/CVSTHost.h"
 
 #define KEYNAME_BUFFER_LENGTH	"BufferTime"
 #define VDEFAULT_BUFFER_LENGTH	20
 
 
 
-bool VstPluginHost::OnSizeWindow(int nEffect, long width, long height)
+static CVST_Plugin g_plugin = nullptr;
+static HWND hwndForVst = nullptr;
+static bool editorOpened = false;
+static CVST_Properties props;
+
+bool OnSizeWindow(long width, long height)
 {
     RECT rect{ 0,0,width,height };
     AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, NULL);
-    SetWindowPos((HWND)GetAt(nEffect)->pEffect->user, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
+    SetWindowPos(hwndForVst, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER);
     return true;
 }
 
-VstPluginHost VstPlugin::vsthost;
+int CDECL vstHostCallback(CVST_HostEvent* event, CVST_Plugin plugin, void* userData)
+{
+    event->handled = true;
+    switch (event->eventType) {
+    case CVST_EventType_Log:
+        printf("VST>> %s\n", event->logEvent.message);
+        break;
+    case CVST_EventType_Automation:
+        printf(" = vst automation [%03d] value %.2f\n", event->automationEvent.index, event->automationEvent.value);
+        break;
+    case CVST_EventType_GetVendorInfo:
+        event->vendorInfoEvent.vendor = "Derp";
+        event->vendorInfoEvent.product = "LibraryTest";
+        event->vendorInfoEvent.version = 1234;
+        break;
+    case CVST_EventType_SizeWindow:
+        return OnSizeWindow(event->sizeWindowEvent.width, event->sizeWindowEvent.height);
+    default:
+        event->handled = false;
+    }
+    return 0;
+}
+
 
 #define ALWAYS_ON_TOP 1
 
 int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
 {
-	nEffect = vsthost.LoadPlugin(path);
-	if (nEffect == -1)
+    USES_CONVERSION;
+    CVST_Init(vstHostCallback);
+    g_plugin = CVST_LoadPlugin(T2A(path), nullptr);
+	if (!g_plugin)
 		return -1;
 
-	vsthost.EffOpen(nEffect);
+    CVST_GetProperties(g_plugin, &props);
+    CVST_Start(g_plugin, smpRate);
 
     m_smpRate = smpRate;
-	vsthost.SetSampleRate(smpRate);
-    vsthost.SetBlockSize(m_blockSize = 512);
+    CVST_SetBlockSize(g_plugin, m_blockSize = 512);
 
-    vsthost.EffMainsChanged(nEffect, true);
-    vsthost.EffStartProcess(nEffect);
-    vsthost.EffResume(nEffect);
+    CVST_Resume(g_plugin);
 
-    USES_CONVERSION;
     char effname[256];
-    ERect effrect;
-    ERect* peffrect = &effrect;
-    vsthost.EffGetEffectName(nEffect, effname);
-    vsthost.EffEditGetRect(nEffect, &peffrect);
-    RECT rect{ peffrect->left,peffrect->top,peffrect->right,peffrect->bottom };
+    int effwidth, effheight;
+    CVST_GetEditorSize(g_plugin, &effwidth, &effheight);
+    CVST_GetEffectName(g_plugin, effname);
+    RECT rect{ 0,0,effwidth,effheight };
     WNDCLASSEX wcex{ sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW ,[](HWND hwnd,UINT msg,WPARAM w,LPARAM l)
         {
             switch (msg)
@@ -94,7 +120,6 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
     AdjustWindowRectEx(&rect, style, FALSE, exStyle);
     hwndForVst = CreateWindowEx(exStyle, wcex.lpszClassName, A2W(effname), style, CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, NULL, NULL);
-    vsthost.GetAt(nEffect)->pEffect->user = hwndForVst;
     SetWindowLongPtr(hwndForVst, GWLP_USERDATA, (LONG_PTR)this);
     DWORD e = GetLastError();
     return 0;
@@ -105,11 +130,9 @@ int VstPlugin::ReleasePlugin()
     ShowPluginWindow(false);
     DestroyWindow(hwndForVst);
     hwndForVst = nullptr;
-    vsthost.EffSuspend(nEffect);
-    vsthost.EffStopProcess(nEffect);
-    vsthost.EffMainsChanged(nEffect, false);
-    //vsthost.EffClose(nEffect);
-	vsthost.RemoveAll();
+    CVST_Suspend(g_plugin);
+    CVST_Destroy(g_plugin);
+    CVST_Shutdown();
     return 0;
 }
 
@@ -120,19 +143,20 @@ int VstPlugin::ShowPluginWindow(bool show)
         if (!IsPluginWindowShown())
         {
             ShowWindow(hwndForVst, SW_SHOW);
-            vsthost.EffEditOpen(nEffect, hwndForVst);
-            ERect* peffrect = NULL;
-            vsthost.EffEditGetRect(nEffect, &peffrect);
-            if (peffrect)
-                vsthost.OnSizeWindow(nEffect, peffrect->right - peffrect->left, peffrect->bottom - peffrect->top);
+            CVST_OpenEditor(g_plugin, (size_t)hwndForVst);
+            int effwidth, effheight;
+            CVST_GetEditorSize(g_plugin, &effwidth, &effheight);
+            OnSizeWindow(effwidth, effheight);
+            editorOpened = true;
         }
     }
     else
     {
         if (IsPluginWindowShown())
         {
-            vsthost.EffEditClose(nEffect);
+            CVST_CloseEditor(g_plugin);
             ShowWindow(hwndForVst, SW_HIDE);
+            editorOpened = false;
         }
     }
     return 0;
@@ -140,7 +164,7 @@ int VstPlugin::ShowPluginWindow(bool show)
 
 bool VstPlugin::IsPluginWindowShown()
 {
-	return vsthost.GetAt(nEffect)->bEditOpen;
+    return editorOpened;
 }
 
 int VstPlugin::SendMidiData(DWORD midiData)
@@ -154,7 +178,7 @@ int VstPlugin::SendMidiData(DWORD midiData)
     VstEvents ves{};
     ves.numEvents = 1;
     ves.events[0] = (VstEvent*)&ve;
-	vsthost.EffProcessEvents(nEffect, &ves);
+    CVST_SendEvents(g_plugin, &ves);
     return 0;
 }
 
@@ -170,14 +194,13 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
     VstEvents ves{};
     ves.numEvents = 1;
     ves.events[0] = (VstEvent*)&ve;
-	vsthost.EffProcessEvents(nEffect, &ves);
+    CVST_SendEvents(g_plugin, &ves);
     return 0;
 }
 
 void VstPlugin::OnIdle()
 {
-    vsthost.EffIdle(nEffect);
-    vsthost.EffEditIdle(nEffect);
+    CVST_Idle(g_plugin);
 }
 
 //如果全部为0则返回true，否则为false
@@ -248,15 +271,15 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         return -1;
     const size_t sizeofWaveFileHeader = 46;
     //修改VST设定为导出文件的配置
-    vsthost.SetSampleRate(wfex.nSamplesPerSec);
-    vsthost.SetBlockSize(1024);
+    CVST_Start(g_plugin, wfex.nSamplesPerSec);
+    CVST_SetBlockSize(g_plugin, 1024);
     //先写入后面的WAV数据，并设定subchunk2Size为音频部分总字节数
     //格式：
     //--------采样1-------|--------采样2-------|…
     //通道1|通道2|通道3|…|通道1|通道2|通道3|…|…
     //准备时长为1(1/1)秒的缓冲区
-    int allocChIn = max(wfex.nChannels, vsthost.GetAt(nEffect)->pEffect->numInputs);
-    int allocChOut = max(wfex.nChannels, vsthost.GetAt(nEffect)->pEffect->numOutputs);
+    int allocChIn = max(wfex.nChannels, props.numInputs);
+    int allocChOut = max(wfex.nChannels, props.numOutputs);
     float** wavBufferIn = new float* [allocChIn];
     float** wavBufferOut = new float* [allocChOut];
     int smpsPerBuffer = wfex.nSamplesPerSec;
@@ -292,7 +315,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     VstEvents ves{};
                     ves.numEvents = 1;
                     ves.events[0] = (VstEvent*)&vexs;
-                    vsthost.EffProcessEvents(nEffect, &ves);
+                    CVST_SendEvents(g_plugin, &ves);
                 }
                 else
                 {
@@ -305,7 +328,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     VstEvents ves{};
                     ves.numEvents = 1;
                     ves.events[0] = (VstEvent*)&vms;
-                    vsthost.EffProcessEvents(nEffect, &ves);
+                    CVST_SendEvents(g_plugin, &ves);
                 }
                 lastMidiEventSample = midiEventSample;
                 lastMidiEventTick = mf[0][cursorMidiEvents].tick;
@@ -318,10 +341,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
             ZeroMemory(wavBufferIn[i], smpsPerBuffer * sizeof(float));
         for (int i = 0; i < allocChOut; i++)
             ZeroMemory(wavBufferOut[i], smpsPerBuffer * sizeof(float));
-        if (vsthost.GetAt(nEffect)->pEffect->flags & effFlagsCanReplacing)
-            vsthost.EffProcessReplacing(nEffect, wavBufferIn, wavBufferOut, smpsPerBuffer);
-        else
-            vsthost.EffProcess(nEffect, wavBufferIn, wavBufferOut, smpsPerBuffer);
+        CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, smpsPerBuffer);
         for (size_t i = 0; i < smpsPerBuffer; i++)
         {
             for (int j = 0; j < wfex.nChannels; j++)
@@ -343,8 +363,8 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     delete[]wavBufferIn;
     delete[]wavBufferOut;
     //恢复原来的设定
-    vsthost.SetSampleRate(m_smpRate);
-    vsthost.SetBlockSize(m_blockSize);
+    CVST_Start(g_plugin,m_smpRate);
+    CVST_SetBlockSize(g_plugin, m_blockSize);
     StartPlayback(oldChannelCount, oldSampleRate);
     return 0;
 }
@@ -358,8 +378,8 @@ void VstPlugin::_Playback()
 
     size_t singleChSamples = player.GetSampleRate() * buffer_time_ms / 1000;
     std::vector<float*>pfChannelsIn,pfChannelsOut;
-    long numInputs = max(player.GetChannelCount(), vsthost.GetAt(nEffect)->pEffect->numInputs);
-    long numOutputs = max(player.GetChannelCount(), vsthost.GetAt(nEffect)->pEffect->numOutputs);//通道数必须至少为该参数的数值，否则极有可能报错
+    long numInputs = max(player.GetChannelCount(), props.numInputs);
+    long numOutputs = max(player.GetChannelCount(), props.numOutputs);//通道数必须至少为该参数的数值，否则极有可能报错
     for (int i = 0; i < numInputs; i++)
         pfChannelsIn.push_back(new float[singleChSamples]);
     for (int i = 0; i < numOutputs; i++)
@@ -368,10 +388,7 @@ void VstPlugin::_Playback()
     {
 		for (int i = 0; i < numInputs; i++)
 			ZeroMemory(pfChannelsIn[i], singleChSamples*sizeof(float));
-		if (vsthost.GetAt(nEffect)->pEffect->flags&effFlagsCanReplacing)
-			vsthost.EffProcessReplacing(nEffect, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
-		else
-			vsthost.EffProcess(nEffect, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
+        CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
         for (size_t i = 0; i < singleChSamples; i++)
         {
             for (int j = 0; j < player.GetChannelCount(); j++)

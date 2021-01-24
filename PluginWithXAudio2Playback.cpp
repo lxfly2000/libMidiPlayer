@@ -2,6 +2,10 @@
 
 XAudio2Player PluginWithXAudio2Playback::player;
 
+PluginWithXAudio2Playback::PluginWithXAudio2Playback():isPlayingBack(0)
+{
+}
+
 void PluginWithXAudio2Playback::SetVolume(float v)
 {
 	player.SetVolume(v);

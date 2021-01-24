@@ -27,10 +27,13 @@
     <ClCompile Include="PluginWithXAudio2Playback.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="CVSTHost.cpp">
+    <ClCompile Include="SDKwavefile.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="SDKwavefile.cpp">
+    <ClCompile Include="CVSTHost\source\win32\CVSTHost.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CVSTHost\source\win32\unicodestuff.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -45,9 +48,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="PluginWithXAudio2Playback.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="CVSTHost.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="SF2Plugin.h">

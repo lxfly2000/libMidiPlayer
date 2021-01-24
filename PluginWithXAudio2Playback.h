@@ -4,6 +4,7 @@
 class PluginWithXAudio2Playback
 {
 public:
+	PluginWithXAudio2Playback();
 	//加载插件文件或音源文件，成功返回0，否则返回-1
 	virtual int LoadPlugin(LPCTSTR path, int smpRate = 44100) = 0;
 	virtual int ReleasePlugin() = 0;
