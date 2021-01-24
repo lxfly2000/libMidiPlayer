@@ -17,8 +17,10 @@ public:
 	int SendMidiData(DWORD midiData)override;
 	int SendSysExData(LPVOID data, DWORD length)override;
 	void OnIdle();
+	int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)override;
 private:
 	static VstPluginHost vsthost;//Singleton
 	int nEffect;
+	int m_smpRate,m_blockSize;
 	HWND hwndForVst;
 };

@@ -21,6 +21,7 @@ public:
 class XAudio2Player
 {
 public:
+	//bytesPerVar:指的是一个采样点的一个通道占字节数
 	int Init(int nChannel, int sampleRate, int bytesPerVar);
 	void Release();
 	void Play(BYTE* buf, int length);
@@ -34,6 +35,7 @@ public:
 	void WaitForBufferEndEvent();
 	int GetChannelCount();
 	int GetSampleRate();
+	//指的是一个采样点的一个通道占字节数
 	int GetBytesPerVar();
 private:
 	IXAudio2* xAudio2Engine;

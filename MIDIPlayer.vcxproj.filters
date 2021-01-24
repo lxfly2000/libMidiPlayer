@@ -30,6 +30,9 @@
     <ClCompile Include="CVSTHost.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="SDKwavefile.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MidiPlayer.h">
@@ -48,6 +51,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="SF2Plugin.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SDKwavefile.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

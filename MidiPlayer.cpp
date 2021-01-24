@@ -623,3 +623,8 @@ int MidiPlayer::GetInitResult()
 {
 	return initResult;
 }
+
+int MidiPlayer::PluginExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
+{
+	return pluginPlayer->ExportToWav(midiFilePath, wavFilePath);
+}

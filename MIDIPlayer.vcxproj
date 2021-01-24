@@ -170,6 +170,7 @@
     <ClCompile Include="CVSTHost.cpp" />
     <ClCompile Include="MidiPlayer.cpp" />
     <ClCompile Include="PluginWithXAudio2Playback.cpp" />
+    <ClCompile Include="SDKwavefile.cpp" />
     <ClCompile Include="vstplugin.cpp" />
     <ClCompile Include="XAudio2Player.cpp" />
   </ItemGroup>
@@ -177,6 +178,7 @@
     <ClInclude Include="CVSTHost.h" />
     <ClInclude Include="MidiPlayer.h" />
     <ClInclude Include="PluginWithXAudio2Playback.h" />
+    <ClInclude Include="SDKwavefile.h" />
     <ClInclude Include="SF2Plugin.h" />
     <ClInclude Include="vstplugin.h" />
     <ClInclude Include="XAudio2Player.h" />

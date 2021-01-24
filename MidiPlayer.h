@@ -161,9 +161,18 @@ public:
 	HMIDIOUT GetHandle();
 	void _ProcessMidiShortEvent(DWORD midiEvent,bool sendMidiOut);
 	void _ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut);
+	//返回值：
+	//MIDI_MAPPER(-1):MIDI映射器
+	//0以上正整数：MIDI设备
+	//MIDI_DEVICE_USE_VST_PLUGIN(-3)：使用VST插件
+	//MIDI_DEVICE_USE_SOUNDFONT2(-4)：使用SF2文件
 	UINT GetDeviceID();
 	PluginWithXAudio2Playback* GetPlugin();
+	//返回0表示加载成功，-1为失败
 	int GetInitResult();
+	//当使用VST插件时，导出到WAV音频文件（仅32位浮点48KHz格式）
+	//返回0表示成功，-1表示失败
+	int PluginExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath);
 protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
