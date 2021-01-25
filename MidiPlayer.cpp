@@ -29,13 +29,20 @@ pFuncOnControlChange(nullptr), pFuncOnSysEx(nullptr), pFuncOnLyricText(nullptr),
 	{
 	case MIDI_DEVICE_USE_VST_PLUGIN:
 		pluginPlayer = new VstPlugin;
-		if (pluginPlayer->LoadPlugin((LPCTSTR)extraInfo, 44100))
+		if (pluginPlayer->InitPlayer(2, 44100))
 		{
 			DELETE_PTR(pluginPlayer);
 			initResult = -1;
 			return;
 		}
-		pluginPlayer->StartPlayback(2, 44100);
+		if (pluginPlayer->LoadPlugin((LPCTSTR)extraInfo, 44100))
+		{
+			pluginPlayer->ReleasePlayer();
+			DELETE_PTR(pluginPlayer);
+			initResult = -1;
+			return;
+		}
+		pluginPlayer->StartPlayback();
 		break;
 	case MIDI_DEVICE_USE_SOUNDFONT2:
 		//TODO
@@ -58,6 +65,7 @@ MidiPlayer::~MidiPlayer()
 	{
 		pluginPlayer->StopPlayback();
 		pluginPlayer->ReleasePlugin();
+		pluginPlayer->ReleasePlayer();
 		DELETE_PTR(pluginPlayer);
 	}
 	else
