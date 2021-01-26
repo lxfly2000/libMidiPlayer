@@ -16,6 +16,12 @@
 
 
 
+struct MyVstEvents
+{
+    VstInt32 numEvents;
+    VstIntPtr reserved;
+    VstEvent* events[4096];
+};
 static CVST_Plugin g_plugin = nullptr;
 static HWND hwndForVst = nullptr;
 static bool editorOpened = false;
@@ -310,6 +316,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     int lastMidiEventSample = 0, lastMidiEventTick = 0;
     while (true)
     {
+        MyVstEvents ves{};
         //发送MIDI消息
         for (int i = 0; i < smpsPerBuffer; i++)
         {
@@ -323,38 +330,43 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     bpm = mf[0][cursorMidiEvents].getTempoBPM();
                 if ((mf[0][cursorMidiEvents].data()[0] & 0xF0) == 0xF0)
                 {
-                    VstMidiSysexEvent vexs{};
-                    vexs.type = kVstSysExType;
-                    vexs.byteSize = sizeof(vexs);
-                    vexs.deltaFrames = i;
-                    vexs.flags = 0;
-                    vexs.dumpBytes = mf[0][cursorMidiEvents].size();
-                    vexs.sysexDump = (char*)mf[0][cursorMidiEvents].data();
-                    VstEvents ves{};
-                    ves.numEvents = 1;
-                    ves.events[0] = (VstEvent*)&vexs;
-                    CVST_SendEvents(g_plugin, &ves);
-                    CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+                    if (ves.numEvents < ARRAYSIZE(ves.events))
+                    {
+                        VstMidiSysexEvent* vexs = new VstMidiSysexEvent{};
+                        vexs->type = kVstSysExType;
+                        vexs->byteSize = sizeof(vexs);
+                        vexs->deltaFrames = i;
+                        vexs->flags = 0;
+                        vexs->dumpBytes = mf[0][cursorMidiEvents].size();
+                        vexs->sysexDump = (char*)mf[0][cursorMidiEvents].data();
+                        ves.events[ves.numEvents] = (VstEvent*)vexs;
+                        ves.numEvents++;
+                        //CVST_SendEvents(g_plugin, &ves);
+                        //CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+                    }
                 }
                 else
                 {
-                    VstMidiEvent vms{};
-                    vms.type = kVstMidiType;
-                    vms.byteSize = sizeof(vms);
-                    vms.deltaFrames = i;
-                    vms.flags = 0;
-                    memcpy(vms.midiData, mf[0][cursorMidiEvents].data(), sizeof(vms.midiData));
-                    VstEvents ves{};
-                    ves.numEvents = 1;
-                    ves.events[0] = (VstEvent*)&vms;
-                    CVST_SendEvents(g_plugin, &ves);
-                    CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+                    if (ves.numEvents < ARRAYSIZE(ves.events))
+                    {
+                        VstMidiEvent* vms = new VstMidiEvent{};
+                        vms->type = kVstMidiType;
+                        vms->byteSize = sizeof(vms);
+                        vms->deltaFrames = i;
+                        vms->flags = 0;
+                        memcpy(vms->midiData, mf[0][cursorMidiEvents].data(), sizeof(vms->midiData));
+                        ves.events[ves.numEvents] = (VstEvent*)vms;
+                        ves.numEvents++;
+                        //CVST_SendEvents(g_plugin, &ves);
+                        //CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+                    }
                 }
                 lastMidiEventSample = midiEventSample;
                 lastMidiEventTick = mf[0][cursorMidiEvents].tick;
                 cursorMidiEvents++;
             }
         }
+        CVST_SendEvents(g_plugin, (VstEvents*)&ves);
         cursorSample += smpsPerBuffer;
         //接收、写入音频
         for (int i = 0; i < allocChIn; i++)
@@ -362,6 +374,8 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         for (int i = 0; i < allocChOut; i++)
             ZeroMemory(wavBufferOut[i], smpsPerBuffer * sizeof(float));
         CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, smpsPerBuffer);
+        for (int i = 0; i < ves.numEvents; i++)
+            delete ves.events[i];
         for (size_t i = 0; i < smpsPerBuffer; i++)
         {
             for (int j = 0; j < wfex.nChannels; j++)
