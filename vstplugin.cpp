@@ -5,6 +5,7 @@
 
 #include "vstplugin.h"
 #include <sstream>
+#include <deque>
 #include <atlconv.h>
 #include <MidiFile.h>
 
@@ -20,8 +21,10 @@ struct MyVstEvents
 {
     VstInt32 numEvents;
     VstIntPtr reserved;
-    VstEvent* events[4096];
+    VstEvent* events[256];
 };
+static std::deque<MyVstEvents> vstEventsQueue;
+static MyVstEvents vstEventsBuffer;
 static CVST_Plugin g_plugin = nullptr;
 static HWND hwndForVst = nullptr;
 static bool editorOpened = false;
@@ -191,36 +194,49 @@ bool VstPlugin::IsPluginWindowShown()
 
 int VstPlugin::SendMidiData(DWORD midiData)
 {
-    VstMidiEvent ve{};
-    ve.type = kVstMidiType;
-    ve.byteSize = sizeof(ve);
-    ve.deltaFrames = 0;
-    ve.flags = kVstMidiEventIsRealtime;
-    memcpy(ve.midiData, &midiData, sizeof(ve.midiData));
-    VstEvents ves{};
-    ves.numEvents = 1;
-    ves.events[0] = (VstEvent*)&ve;
+    if (vstEventsBuffer.numEvents >= ARRAYSIZE(vstEventsBuffer.events))
+        return -1;
+    VstMidiEvent* ve = new VstMidiEvent{};
+    ve->type = kVstMidiType;
+    ve->byteSize = sizeof(ve);
+    ve->deltaFrames = 0;
+    ve->flags = kVstMidiEventIsRealtime;
+    memcpy(ve->midiData, &midiData, sizeof(ve->midiData));
+    MyVstEvents& ves = vstEventsBuffer;
+    ves.events[ves.numEvents] = (VstEvent*)ve;
+    ves.numEvents++;
     //【特别注意】根据SDK文档，调用processReplacing前最多只能调用一次processEvent！
-    CVST_SendEvents(g_plugin, &ves);
-    CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+    //CVST_SendEvents(g_plugin, &ves);
+    //CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
     return 0;
 }
 
 int VstPlugin::SendSysExData(LPVOID data, DWORD length)
 {
-    VstMidiSysexEvent ve{};
-    ve.type = kVstSysExType;
-    ve.byteSize = sizeof(ve);
-    ve.deltaFrames = 0;
-    ve.flags = kVstMidiEventIsRealtime;
-    ve.dumpBytes = length;
-    ve.sysexDump = (char*)data;
-    VstEvents ves{};
-    ves.numEvents = 1;
-    ves.events[0] = (VstEvent*)&ve;
-    CVST_SendEvents(g_plugin, &ves);
-    CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+    if (vstEventsBuffer.numEvents >= ARRAYSIZE(vstEventsBuffer.events))
+        return -1;
+    VstMidiSysexEvent* ve = new VstMidiSysexEvent{};
+    ve->type = kVstSysExType;
+    ve->byteSize = sizeof(ve);
+    ve->deltaFrames = 0;
+    ve->flags = kVstMidiEventIsRealtime;
+    ve->dumpBytes = length;
+    ve->sysexDump = (char*)data;
+    MyVstEvents& ves = vstEventsBuffer;
+    ves.events[ves.numEvents] = (VstEvent*)ve;
+    ves.numEvents++;
+    //CVST_SendEvents(g_plugin, &ves);
+    //CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
     return 0;
+}
+
+void VstPlugin::CommitSend()
+{
+    if (vstEventsBuffer.numEvents)
+    {
+        vstEventsQueue.push_back(vstEventsBuffer);
+        vstEventsBuffer.numEvents = 0;
+    }
 }
 
 void VstPlugin::OnIdle()
@@ -409,7 +425,16 @@ void VstPlugin::_Playback()
     {
 		for (int i = 0; i < numInputs; i++)
 			ZeroMemory(pfChannelsIn[i], singleChSamples*sizeof(float));
+        if (vstEventsQueue.size())
+            CVST_SendEvents(g_plugin, (VstEvents*)&vstEventsQueue.front());
         CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
+        if (vstEventsQueue.size())
+        {
+            MyVstEvents& ve = vstEventsQueue.front();
+            for (int i = 0; i < ve.numEvents; i++)
+                delete ve.events[i];
+            vstEventsQueue.pop_front();
+        }
         for (size_t i = 0; i < singleChSamples; i++)
         {
             for (int j = 0; j < player.GetChannelCount(); j++)

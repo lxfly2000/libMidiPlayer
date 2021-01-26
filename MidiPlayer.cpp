@@ -371,6 +371,8 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			if (++nEvent >= nEventCount)
 				break;
 		}
+		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+			((VstPlugin*)pluginPlayer)->CommitSend();
 	}
 	if (loopEndTick)
 	{

@@ -11,6 +11,7 @@ public:
 	void _Playback()override;
 	int SendMidiData(DWORD midiData)override;
 	int SendSysExData(LPVOID data, DWORD length)override;
+	void CommitSend();
 	void OnIdle();
 	int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)override;
 private:
