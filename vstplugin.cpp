@@ -21,7 +21,7 @@ struct MyVstEvents
 {
     VstInt32 numEvents;
     VstIntPtr reserved;
-    VstEvent* events[256];
+    VstEvent* events[1024];
 };
 static std::deque<MyVstEvents> vstEventsQueue;
 static MyVstEvents vstEventsBuffer;
