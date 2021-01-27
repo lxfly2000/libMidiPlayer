@@ -198,7 +198,7 @@ int VstPlugin::SendMidiData(DWORD midiData)
         return -1;
     VstMidiEvent* ve = new VstMidiEvent{};
     ve->type = kVstMidiType;
-    ve->byteSize = sizeof(ve);
+    ve->byteSize = sizeof(*ve);
     ve->deltaFrames = 0;
     ve->flags = kVstMidiEventIsRealtime;
     memcpy(ve->midiData, &midiData, sizeof(ve->midiData));
@@ -217,7 +217,7 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
         return -1;
     VstMidiSysexEvent* ve = new VstMidiSysexEvent{};
     ve->type = kVstSysExType;
-    ve->byteSize = sizeof(ve);
+    ve->byteSize = sizeof(*ve);
     ve->deltaFrames = 0;
     ve->flags = kVstMidiEventIsRealtime;
     ve->dumpBytes = length;
@@ -350,7 +350,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     {
                         VstMidiSysexEvent* vexs = new VstMidiSysexEvent{};
                         vexs->type = kVstSysExType;
-                        vexs->byteSize = sizeof(vexs);
+                        vexs->byteSize = sizeof(*vexs);
                         vexs->deltaFrames = i;
                         vexs->flags = 0;
                         vexs->dumpBytes = mf[0][cursorMidiEvents].size();
@@ -367,7 +367,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     {
                         VstMidiEvent* vms = new VstMidiEvent{};
                         vms->type = kVstMidiType;
-                        vms->byteSize = sizeof(vms);
+                        vms->byteSize = sizeof(*vms);
                         vms->deltaFrames = i;
                         vms->flags = 0;
                         memcpy(vms->midiData, mf[0][cursorMidiEvents].data(), sizeof(vms->midiData));
@@ -382,7 +382,8 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                 cursorMidiEvents++;
             }
         }
-        CVST_SendEvents(g_plugin, (VstEvents*)&ves);
+		if(ves.numEvents)
+			CVST_SendEvents(g_plugin, (VstEvents*)&ves);
         cursorSample += smpsPerBuffer;
         //Ω” ’°¢–¥»Î“Ù∆µ
         for (int i = 0; i < allocChIn; i++)
