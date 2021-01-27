@@ -256,7 +256,6 @@ template<typename T>bool CheckAllZero(T** p, int ylength, int xlength)
     return true;
 }
 
-#define EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
 int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
 {
     StopPlayback();
@@ -308,7 +307,6 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     };
     if (FAILED(waveFile.Open(wfPath, &wfex, WAVEFILE_WRITE)))
         return -1;
-    const size_t sizeofWaveFileHeader = 46;
     //修改VST设定为导出文件的配置
     CVST_Start(g_plugin, wfex.nSamplesPerSec);
     CVST_SetBlockSize(g_plugin, 1024);
@@ -328,94 +326,66 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         wavBufferIn[i] = new float[smpsPerBuffer];
     for (int i = 0; i < allocChOut; i++)
         wavBufferOut[i] = new float[smpsPerBuffer];
-    int cursorMidiEvents = 0, cursorSample = 0;
+    std::vector<float>eventSamples;
     double bpm = 120.0;
-    int lastMidiEventSample = 0, lastMidiEventTick = 0;
-    while (true)
+    for (int i = 0; i < mf[0].size(); i++)
     {
-#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-        MyVstEvents ves{};
-#endif
-        //发送MIDI消息
-        for (int i = 0; i < smpsPerBuffer; i++)
+        if (eventSamples.empty())
+            eventSamples.push_back(mf[0][i].tick * 60.0f * sampleRate / mf.getTicksPerQuarterNote() / bpm);
+        else
+            eventSamples.push_back((mf[0][i].tick - mf[0][i - 1].tick) * 60.0f * sampleRate / mf.getTicksPerQuarterNote() / bpm + eventSamples[i - 1]);
+        if (mf[0][i].isTempo())
+            bpm = mf[0][i].getTempoBPM();
+    }
+
+    int cursorNEvent = 0;
+    for (int currentSample = 0;; currentSample += smpsPerBuffer)
+    {
+        MyVstEvents mve{};
+        while (cursorNEvent<eventSamples.size()&&eventSamples[cursorNEvent] < (float)currentSample)
         {
-            while (cursorMidiEvents < mf[0].size())
+            if ((mf[0][cursorNEvent].data()[0] & 0xF0) == 0xF0)
             {
-                //需要将tick换算成sample
-                int midiEventSample = lastMidiEventSample + (mf[0][cursorMidiEvents].tick - lastMidiEventTick) * 60 * sampleRate / mf.getTicksPerQuarterNote() / bpm;
-                if (midiEventSample >= cursorSample + i)
-                    break;
-                if (mf[0][cursorMidiEvents].isTempo())
-                    bpm = mf[0][cursorMidiEvents].getTempoBPM();
-                if ((mf[0][cursorMidiEvents].data()[0] & 0xF0) == 0xF0)
+                if (mve.numEvents < ARRAYSIZE(mve.events))
                 {
-#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-                    if (ves.numEvents < ARRAYSIZE(ves.events))
-                    {
-#else
-						VstEvents ves{};
-#endif
-                        VstMidiSysexEvent* vexs = new VstMidiSysexEvent{};
-                        vexs->type = kVstSysExType;
-                        vexs->byteSize = sizeof(*vexs);
-                        vexs->deltaFrames = i;
-                        vexs->flags = 0;
-                        vexs->dumpBytes = mf[0][cursorMidiEvents].size();
-                        vexs->sysexDump = (char*)mf[0][cursorMidiEvents].data();
-                        ves.events[ves.numEvents] = (VstEvent*)vexs;
-                        ves.numEvents++;
-#ifndef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-                        CVST_SendEvents(g_plugin, &ves);
-                        CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
-						delete vexs;
-#else
-                    }
-#endif
+                    VstMidiSysexEvent* vexs = new VstMidiSysexEvent{};
+                    vexs->type = kVstSysExType;
+                    vexs->byteSize = sizeof(VstMidiSysexEvent);
+                    vexs->deltaFrames = (int)eventSamples[cursorNEvent] % smpsPerBuffer;
+                    vexs->flags = kVstMidiEventIsRealtime;
+                    vexs->dumpBytes = mf[0][cursorNEvent].size();
+                    vexs->sysexDump = (char*)mf[0][cursorNEvent].data();
+                    mve.events[mve.numEvents] = (VstEvent*)vexs;
+                    mve.numEvents++;
                 }
-                else
-                {
-#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-                    if (ves.numEvents < ARRAYSIZE(ves.events))
-                    {
-#else
-						VstEvents ves{};
-#endif
-                        VstMidiEvent* vms = new VstMidiEvent{};
-                        vms->type = kVstMidiType;
-                        vms->byteSize = sizeof(*vms);
-                        vms->deltaFrames = i;
-                        vms->flags = 0;
-                        memcpy(vms->midiData, mf[0][cursorMidiEvents].data(), sizeof(vms->midiData));
-                        ves.events[ves.numEvents] = (VstEvent*)vms;
-                        ves.numEvents++;
-#ifndef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-                        CVST_SendEvents(g_plugin, &ves);
-                        CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
-						delete vms;
-#else
-                    }
-#endif
-                }
-                lastMidiEventSample = midiEventSample;
-                lastMidiEventTick = mf[0][cursorMidiEvents].tick;
-                cursorMidiEvents++;
             }
+            else
+            {
+                if (mve.numEvents < ARRAYSIZE(mve.events))
+                {
+                    VstMidiEvent* vms = new VstMidiEvent{};
+                    vms->type = kVstMidiType;
+                    vms->byteSize = sizeof(VstMidiEvent);
+                    vms->deltaFrames = (int)eventSamples[cursorNEvent] % smpsPerBuffer;
+                    vms->flags = kVstMidiEventIsRealtime;
+                    memcpy(vms->midiData, mf[0][cursorNEvent].data(), sizeof(vms->midiData));
+                    mve.events[mve.numEvents] = (VstEvent*)vms;
+                    mve.numEvents++;
+                }
+            }
+            cursorNEvent++;
         }
-#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-		if(ves.numEvents)
-			CVST_SendEvents(g_plugin, (VstEvents*)&ves);
-#endif
-        cursorSample += smpsPerBuffer;
-        //接收、写入音频
+        if (mve.numEvents)
+            CVST_SendEvents(g_plugin, (VstEvents*)&mve);
+        //接收写入音频
         for (int i = 0; i < allocChIn; i++)
             ZeroMemory(wavBufferIn[i], smpsPerBuffer * sizeof(float));
         for (int i = 0; i < allocChOut; i++)
-            ZeroMemory(wavBufferOut[i], smpsPerBuffer * sizeof(float));
+            ZeroMemory(wavBufferIn[i], smpsPerBuffer * sizeof(float));
         CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, smpsPerBuffer);
-#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
-        for (int i = 0; i < ves.numEvents; i++)
-            delete ves.events[i];
-#endif
+        for (int i = 0; i < mve.numEvents; i++)
+            delete mve.events[i];
+
         for (size_t i = 0; i < smpsPerBuffer; i++)
         {
             for (int j = 0; j < wfex.nChannels; j++)
@@ -426,15 +396,15 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
             }
         }
         //如果MIDI已结束且音频已达到指定的连续静音次数则退出循环
-		if (cursorMidiEvents >= mf[0].size())
-		{
-			if (CheckAllZero(wavBufferIn, wfex.nChannels, smpsPerBuffer))
-				tailSilenceCheckCount++;
-			else
-				tailSilenceCheckCount = 0;
-			if (tailSilenceCheckCount >= tailSilenceCheckLength)
-				break;
-		}
+        if (cursorNEvent >= mf[0].size())
+        {
+            if (CheckAllZero(wavBufferIn, wfex.nChannels, smpsPerBuffer))
+                tailSilenceCheckCount++;
+            else
+                tailSilenceCheckCount = 0;
+            if (tailSilenceCheckCount >= tailSilenceCheckLength)
+                break;
+        }
     }
     //释放内存
     for (int i = 0; i < allocChIn; i++)
