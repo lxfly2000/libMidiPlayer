@@ -1,5 +1,3 @@
-//本人技术有限，该功能对部分VST插件支持效果不好，具体表现有MIDI延迟、部分插件无声音等
-
 #define _CRT_SECURE_NO_WARNINGS
 
 
@@ -258,6 +256,7 @@ template<typename T>bool CheckAllZero(T** p, int ylength, int xlength)
     return true;
 }
 
+#define EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
 int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
 {
     StopPlayback();
@@ -322,7 +321,9 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     int allocChOut = max(wfex.nChannels, props.numOutputs);
     float** wavBufferIn = new float* [allocChIn];
     float** wavBufferOut = new float* [allocChOut];
-    int smpsPerBuffer = wfex.nSamplesPerSec;
+    int smpsPerBuffer = wfex.nSamplesPerSec/300;
+	int tailSilenceCheckCount = 0;
+	const int tailSilenceCheckLength = 5 * wfex.nSamplesPerSec / smpsPerBuffer;
     for (int i = 0; i < allocChIn; i++)
         wavBufferIn[i] = new float[smpsPerBuffer];
     for (int i = 0; i < allocChOut; i++)
@@ -332,7 +333,9 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     int lastMidiEventSample = 0, lastMidiEventTick = 0;
     while (true)
     {
+#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
         MyVstEvents ves{};
+#endif
         //发送MIDI消息
         for (int i = 0; i < smpsPerBuffer; i++)
         {
@@ -346,8 +349,12 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     bpm = mf[0][cursorMidiEvents].getTempoBPM();
                 if ((mf[0][cursorMidiEvents].data()[0] & 0xF0) == 0xF0)
                 {
+#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
                     if (ves.numEvents < ARRAYSIZE(ves.events))
                     {
+#else
+						VstEvents ves{};
+#endif
                         VstMidiSysexEvent* vexs = new VstMidiSysexEvent{};
                         vexs->type = kVstSysExType;
                         vexs->byteSize = sizeof(*vexs);
@@ -357,14 +364,22 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                         vexs->sysexDump = (char*)mf[0][cursorMidiEvents].data();
                         ves.events[ves.numEvents] = (VstEvent*)vexs;
                         ves.numEvents++;
-                        //CVST_SendEvents(g_plugin, &ves);
-                        //CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+#ifndef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
+                        CVST_SendEvents(g_plugin, &ves);
+                        CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+						delete vexs;
+#else
                     }
+#endif
                 }
                 else
                 {
+#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
                     if (ves.numEvents < ARRAYSIZE(ves.events))
                     {
+#else
+						VstEvents ves{};
+#endif
                         VstMidiEvent* vms = new VstMidiEvent{};
                         vms->type = kVstMidiType;
                         vms->byteSize = sizeof(*vms);
@@ -373,17 +388,23 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                         memcpy(vms->midiData, mf[0][cursorMidiEvents].data(), sizeof(vms->midiData));
                         ves.events[ves.numEvents] = (VstEvent*)vms;
                         ves.numEvents++;
-                        //CVST_SendEvents(g_plugin, &ves);
-                        //CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+#ifndef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
+                        CVST_SendEvents(g_plugin, &ves);
+                        CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, 0);
+						delete vms;
+#else
                     }
+#endif
                 }
                 lastMidiEventSample = midiEventSample;
                 lastMidiEventTick = mf[0][cursorMidiEvents].tick;
                 cursorMidiEvents++;
             }
         }
+#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
 		if(ves.numEvents)
 			CVST_SendEvents(g_plugin, (VstEvents*)&ves);
+#endif
         cursorSample += smpsPerBuffer;
         //接收、写入音频
         for (int i = 0; i < allocChIn; i++)
@@ -391,8 +412,10 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         for (int i = 0; i < allocChOut; i++)
             ZeroMemory(wavBufferOut[i], smpsPerBuffer * sizeof(float));
         CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, smpsPerBuffer);
+#ifdef EXPORT_TO_WAVE_USE_VST_EVENTS_BUFFER
         for (int i = 0; i < ves.numEvents; i++)
             delete ves.events[i];
+#endif
         for (size_t i = 0; i < smpsPerBuffer; i++)
         {
             for (int j = 0; j < wfex.nChannels; j++)
@@ -402,9 +425,16 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                     return -1;
             }
         }
-        //如果MIDI已结束且音频已静音则退出循环
-        if (cursorMidiEvents >= mf[0].size() && CheckAllZero(wavBufferIn, wfex.nChannels, smpsPerBuffer))
-            break;
+        //如果MIDI已结束且音频已达到指定的连续静音次数则退出循环
+		if (cursorMidiEvents >= mf[0].size())
+		{
+			if (CheckAllZero(wavBufferIn, wfex.nChannels, smpsPerBuffer))
+				tailSilenceCheckCount++;
+			else
+				tailSilenceCheckCount = 0;
+			if (tailSilenceCheckCount >= tailSilenceCheckLength)
+				break;
+		}
     }
     //释放内存
     for (int i = 0; i < allocChIn; i++)
