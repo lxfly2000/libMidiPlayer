@@ -409,7 +409,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
         for (int i = 0; i < allocChIn; i++)
             ZeroMemory(wavBufferIn[i], smpsPerBuffer * sizeof(float));
         for (int i = 0; i < allocChOut; i++)
-            ZeroMemory(wavBufferIn[i], smpsPerBuffer * sizeof(float));
+            ZeroMemory(wavBufferOut[i], smpsPerBuffer * sizeof(float));
         CVST_ProcessReplacing(g_plugin, wavBufferIn, wavBufferOut, smpsPerBuffer);
         for (int i = 0; i < mve.numEvents; i++)
             delete mve.events[i];
@@ -430,7 +430,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
         //如果MIDI已结束且音频已达到指定的连续静音次数则退出循环
         if (cursorNEvent >= (ULONG)mf[0].size())
         {
-            if (CheckAllZero(wavBufferIn, wfex.nChannels, smpsPerBuffer))
+            if (CheckAllZero(wavBufferOut, wfex.nChannels, smpsPerBuffer))
                 tailSilenceCheckCount++;
             else
                 tailSilenceCheckCount = 0;
