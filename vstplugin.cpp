@@ -245,13 +245,13 @@ void VstPlugin::OnIdle()
 }
 
 //如果全部为0则返回true，否则为false
-template<typename T>bool CheckAllZero(T** p, int ylength, int xlength)
+bool CheckAllZero(float** p, int ylength, int xlength)
 {
     for (int j = 0; j < ylength; j++)
     {
         for (int i = 0; i < xlength; i++)
         {
-            if (p[j][i] != 0)
+            if (abs(p[j][i]) > 0.0001f)
                 return false;
         }
     }
@@ -342,8 +342,8 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
     float** wavBufferIn = new float* [allocChIn];
     float** wavBufferOut = new float* [allocChOut];
     int smpsPerBuffer = wfex.nSamplesPerSec/300;
-	int tailSilenceCheckCount = 0;
-	const int tailSilenceCheckLength = 5 * wfex.nSamplesPerSec / smpsPerBuffer;
+    int tailSilenceCheckCount = 0, tailCheckForceBreakCount = 0;
+    const int tailSilenceCheckLength = 5 * wfex.nSamplesPerSec / smpsPerBuffer, tailCheckForceBreakLength = 30 * wfex.nSamplesPerSec / smpsPerBuffer;
     for (int i = 0; i < allocChIn; i++)
         wavBufferIn[i] = new float[smpsPerBuffer];
     for (int i = 0; i < allocChOut; i++)
@@ -430,11 +430,12 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
         //如果MIDI已结束且音频已达到指定的连续静音次数则退出循环
         if (cursorNEvent >= (ULONG)mf[0].size())
         {
+            tailCheckForceBreakCount++;
             if (CheckAllZero(wavBufferOut, wfex.nChannels, smpsPerBuffer))
                 tailSilenceCheckCount++;
             else
                 tailSilenceCheckCount = 0;
-            if (tailSilenceCheckCount >= tailSilenceCheckLength)
+            if (tailSilenceCheckCount >= tailSilenceCheckLength || tailCheckForceBreakCount >= tailCheckForceBreakLength)
                 break;
         }
     }
