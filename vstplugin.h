@@ -13,7 +13,7 @@ public:
 	int SendSysExData(LPVOID data, DWORD length)override;
 	void CommitSend();
 	void OnIdle();
-	int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)override;
+	int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID extraInfo = NULL)override;
 private:
 	int m_smpRate, m_blockSize;
 	UINT buffer_time_ms;

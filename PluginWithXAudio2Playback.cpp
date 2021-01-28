@@ -50,7 +50,7 @@ void PluginWithXAudio2Playback::_Subthread_Playback(PluginWithXAudio2Playback*p)
 	p->_Playback();
 }
 
-int PluginWithXAudio2Playback::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
+int PluginWithXAudio2Playback::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID extraInfo)
 {
 	return -2;
 }

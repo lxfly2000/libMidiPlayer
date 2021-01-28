@@ -6,6 +6,8 @@
 #include <deque>
 #include <atlconv.h>
 #include <MidiFile.h>
+#include <ShObjIdl.h>
+#include <atlmem.h>
 
 #include "SDKWaveFile.h"
 #include "CVSTHost/source/CVSTHost.h"
@@ -71,7 +73,7 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
 		return -1;
 
     CVST_GetProperties(g_plugin, &props);
-    CVST_Start(g_plugin, smpRate);
+    CVST_Start(g_plugin, (float)smpRate);
 
     m_smpRate = smpRate;
     CVST_SetBlockSize(g_plugin, m_blockSize = 512);
@@ -256,14 +258,26 @@ template<typename T>bool CheckAllZero(T** p, int ylength, int xlength)
     return true;
 }
 
-int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
+int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID extraInfo)
 {
-    StopPlayback();
+	//在任务栏中显示进度条的组件
+	CComPtr<ITaskbarList3>tb;
+	HRESULT hr = tb.CoCreateInstance(CLSID_TaskbarList);
+	if (FAILED(hr))
+		tb.Release();
+	else
+		tb->SetProgressState((HWND)extraInfo, TBPF_INDETERMINATE);
+	{
+	StopPlayback();
     //加载MIDI
     std::ifstream f(midiFilePath, std::ios::binary);
     std::stringstream fm;
-    if (!f)
-        return -1;
+	if (!f)
+	{
+		if (tb != NULL)
+			tb->SetProgressState((HWND)extraInfo, TBPF_NOPROGRESS);
+		return -1;
+	}
     fm << f.rdbuf();
     //提取RMI文件中的MIDI
     char magic[4];
@@ -287,8 +301,12 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     else
         fm.seekg(0);
     smf::MidiFile mf;
-    if (!mf.read(fm))
-        return -1;
+	if (!mf.read(fm))
+	{
+		if (tb != NULL)
+			tb->SetProgressState((HWND)extraInfo, TBPF_NOPROGRESS);
+		return -1;
+	}
     mf.joinTracks();
 
     const int bytesPerVar = sizeof(float);//指的是一个采样点的一个通道占字节数
@@ -305,10 +323,14 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         (WORD)(bytesPerVar * 8),//bpsample
         (WORD)0//cbSize
     };
-    if (FAILED(waveFile.Open(wfPath, &wfex, WAVEFILE_WRITE)))
-        return -1;
+	if (FAILED(waveFile.Open(wfPath, &wfex, WAVEFILE_WRITE)))
+	{
+		if (tb != NULL)
+			tb->SetProgressState((HWND)extraInfo, TBPF_NOPROGRESS);
+		return -1;
+	}
     //修改VST设定为导出文件的配置
-    CVST_Start(g_plugin, wfex.nSamplesPerSec);
+    CVST_Start(g_plugin, (float)wfex.nSamplesPerSec);
     CVST_SetBlockSize(g_plugin, 1024);
     //先写入后面的WAV数据，并设定subchunk2Size为音频部分总字节数
     //格式：
@@ -326,8 +348,9 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         wavBufferIn[i] = new float[smpsPerBuffer];
     for (int i = 0; i < allocChOut; i++)
         wavBufferOut[i] = new float[smpsPerBuffer];
+
     std::vector<float>eventSamples;
-    double bpm = 120.0;
+    float bpm = 120.0f;
     for (int i = 0; i < mf[0].size(); i++)
     {
         if (eventSamples.empty())
@@ -335,10 +358,13 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         else
             eventSamples.push_back((mf[0][i].tick - mf[0][i - 1].tick) * 60.0f * sampleRate / mf.getTicksPerQuarterNote() / bpm + eventSamples[i - 1]);
         if (mf[0][i].isTempo())
-            bpm = mf[0][i].getTempoBPM();
+            bpm = (float)mf[0][i].getTempoBPM();
     }
 
-    int cursorNEvent = 0;
+	if (tb != NULL)
+		tb->SetProgressState((HWND)extraInfo, TBPF_NORMAL);
+
+    ULONG cursorNEvent = 0;
     for (int currentSample = 0;; currentSample += smpsPerBuffer)
     {
         MyVstEvents mve{};
@@ -374,6 +400,8 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
                 }
             }
             cursorNEvent++;
+			if (tb != NULL)
+				tb->SetProgressValue((HWND)extraInfo, cursorNEvent, eventSamples.size());
         }
         if (mve.numEvents)
             CVST_SendEvents(g_plugin, (VstEvents*)&mve);
@@ -386,17 +414,21 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
         for (int i = 0; i < mve.numEvents; i++)
             delete mve.events[i];
 
-        for (size_t i = 0; i < smpsPerBuffer; i++)
+        for (int i = 0; i < smpsPerBuffer; i++)
         {
             for (int j = 0; j < wfex.nChannels; j++)
             {
                 UINT cbWrote;
-                if (FAILED(waveFile.Write(sizeof(float), (PBYTE)&wavBufferOut[j][i], &cbWrote)))
-                    return -1;
+				if (FAILED(waveFile.Write(sizeof(float), (PBYTE)&wavBufferOut[j][i], &cbWrote)))
+				{
+					if (tb != NULL)
+						tb->SetProgressState((HWND)extraInfo, TBPF_NOPROGRESS);
+					return -1;
+				}
             }
         }
         //如果MIDI已结束且音频已达到指定的连续静音次数则退出循环
-        if (cursorNEvent >= mf[0].size())
+        if (cursorNEvent >= (ULONG)mf[0].size())
         {
             if (CheckAllZero(wavBufferIn, wfex.nChannels, smpsPerBuffer))
                 tailSilenceCheckCount++;
@@ -414,9 +446,11 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath)
     delete[]wavBufferIn;
     delete[]wavBufferOut;
     //恢复原来的设定
-    CVST_Start(g_plugin,m_smpRate);
+    CVST_Start(g_plugin,(float)m_smpRate);
     CVST_SetBlockSize(g_plugin, m_blockSize);
     StartPlayback();
+	}if (tb != NULL)
+		tb->SetProgressState((HWND)extraInfo, TBPF_NOPROGRESS);
     return 0;
 }
 

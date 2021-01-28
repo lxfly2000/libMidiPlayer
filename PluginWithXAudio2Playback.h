@@ -21,7 +21,7 @@ public:
 	virtual int SendMidiData(DWORD midiData) = 0;
 	virtual int SendSysExData(LPVOID data,DWORD length) = 0;
 	//导出Wav，成功返回0，失败返回-1，不支持返回-2
-	virtual int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath);
+	virtual int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID extraInfo = NULL);
 protected:
 	static XAudio2Player player;
 	int isPlayingBack;//0表示停止，1表示正在播放音频流

@@ -172,7 +172,7 @@ public:
 	int GetInitResult();
 	//当使用VST插件时，导出到WAV音频文件（仅32位浮点48KHz格式）
 	//返回0表示成功，-1表示失败
-	int PluginExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath);
+	int PluginExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID extraInfo = NULL);
 protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
