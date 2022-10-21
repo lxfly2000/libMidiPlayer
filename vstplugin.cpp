@@ -206,8 +206,10 @@ int VstPlugin::SendMidiData(DWORD midiData)
     ves.events[ves.numEvents] = (VstEvent*)ve;
     ves.numEvents++;
     //【特别注意】根据SDK文档，调用processReplacing前最多只能调用一次processEvent！
-    //CVST_SendEvents(g_plugin, &ves);
-    //CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+    CVST_SendEvents(g_plugin, (VstEvents*)&ves);
+    CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+	delete ve;
+	ves.numEvents = 0;
     return 0;
 }
 
@@ -225,8 +227,10 @@ int VstPlugin::SendSysExData(LPVOID data, DWORD length)
     MyVstEvents& ves = vstEventsBuffer;
     ves.events[ves.numEvents] = (VstEvent*)ve;
     ves.numEvents++;
-    //CVST_SendEvents(g_plugin, &ves);
-    //CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+    CVST_SendEvents(g_plugin, (VstEvents*)&ves);
+    CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+	delete ve;
+	ves.numEvents = 0;
     return 0;
 }
 
