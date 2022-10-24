@@ -61,7 +61,7 @@ MidiPlayer::~MidiPlayer()
 {
 	Stop();
 	Unload();
-	if (pluginPlayer)
+	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 	{
 		pluginPlayer->StopPlayback();
 		pluginPlayer->ReleasePlugin();
@@ -82,7 +82,7 @@ MidiPlayer::~MidiPlayer()
 
 void MidiPlayer::MidiOutShortMsgDispatch(DWORD midiEvent)
 {
-	if (pluginPlayer)
+	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 		pluginPlayer->SendMidiData(midiEvent);
 	else
 		midiOutShortMsg(hMidiOut, midiEvent);
@@ -216,14 +216,22 @@ void MidiPlayer::Pause(bool panic)
 
 void MidiPlayer::Panic(unsigned channel, bool resetkeyboard)
 {
-	int midiData = 0x00007BB0 | (channel & 0xF);
-	if (pluginPlayer)
+	int cmds[] = { 0x000078B0,//All Sounds Off
+		//0x000079B0,//Reset All Controller
+		0x00007BB0,//All Note Off
+		//0x00007CB0//Omni Off
+	};
+	for (int i = 0; i < ARRAYSIZE(cmds); i++)
 	{
-		pluginPlayer->SendMidiData(midiData);
-	}
-	else
-	{
-		midiOutShortMsg(hMidiOut, midiData);
+		int midiData = cmds[i] | (channel & 0xF);
+		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		{
+			pluginPlayer->SendMidiData(midiData);
+		}
+		else
+		{
+			midiOutShortMsg(hMidiOut, midiData);
+		}
 	}
 	if (resetkeyboard)
 	{
@@ -236,6 +244,8 @@ void MidiPlayer::PanicAllChannel(bool resetkeyboard)
 {
 	for (unsigned i = 0; i < nChannels; i++)
 		Panic(i, resetkeyboard);
+	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		pluginPlayer->CommitSend();
 }
 
 void MidiPlayer::Stop(bool bResetMidi)
@@ -245,7 +255,7 @@ void MidiPlayer::Stop(bool bResetMidi)
 	dropEventsCount = 0;
 	if (bResetMidi)
 	{
-		if (pluginPlayer)
+		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 		{
 			/* HOW TO DO THIS??? */
 		}
@@ -285,7 +295,7 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd, bool includeLeft, bool in
 
 void MidiPlayer::SetVolume(unsigned v)
 {
-	if (pluginPlayer)
+	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 	{
 		pluginPlayer->SetVolume(v / 100.0f);
 	}
@@ -342,7 +352,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 				switch (b[0] & 0xF0)//获取MIDI消息类型
 				{
 				case 0x80:case 0x90:case 0xA0:case 0xB0:case 0xC0:case 0xD0:case 0xE0:
-					_ProcessMidiShortEvent(midiEvent,true);
+					_ProcessMidiShortEventInternal(midiEvent,true);
 					break;
 				case 0xF0:
 					if (midifile[0][nEvent].isMeta())//不清楚这样行不行
@@ -363,7 +373,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 						header.lpData = (LPSTR)midiSysExMsg;
 						header.dwFlags = 0;
 						header.dwBufferLength = nMsgSize;
-						_ProcessMidiLongEvent(&header, true);
+						_ProcessMidiLongEventInternal(&header, true);
 					}
 					break;
 				}
@@ -540,7 +550,7 @@ HMIDIOUT MidiPlayer::GetHandle()
 	return hMidiOut;
 }
 
-void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
+void MidiPlayer::_ProcessMidiShortEventInternal(DWORD midiEvent, bool sendMidiOut)
 {
 	PBYTE b = (PBYTE)&midiEvent;
 	switch (b[0] & 0xF0)//获取MIDI消息类型
@@ -600,13 +610,13 @@ void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
 	}
 }
 
-void MidiPlayer::_ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut)
+void MidiPlayer::_ProcessMidiLongEventInternal(LPMIDIHDR midiHeader, bool sendMidiOut)
 {
 	if (pFuncOnSysEx)
 		pFuncOnSysEx((BYTE*)midiHeader->lpData, midiHeader->dwBufferLength);
 	if (sendMidiOut)
 	{
-		if (pluginPlayer)
+		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 		{
 			pluginPlayer->SendSysExData(midiHeader->lpData, midiHeader->dwBufferLength);
 		}
@@ -617,6 +627,20 @@ void MidiPlayer::_ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut)
 			midiOutUnprepareHeader(hMidiOut, midiHeader, sizeof(*midiHeader));
 		}
 	}
+}
+
+void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
+{
+	_ProcessMidiShortEventInternal(midiEvent, sendMidiOut);
+	if (sendMidiOut&&GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		((VstPlugin*)pluginPlayer)->CommitSend();
+}
+
+void MidiPlayer::_ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut)
+{
+	_ProcessMidiLongEventInternal(midiHeader, sendMidiOut);
+	if (sendMidiOut&&GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		((VstPlugin*)pluginPlayer)->CommitSend();
 }
 
 UINT MidiPlayer::GetDeviceID()

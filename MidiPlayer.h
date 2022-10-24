@@ -177,6 +177,8 @@ protected:
 	static MidiPlayer* _pObj;
 	void _TimerFunc(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR);
 private:
+	void _ProcessMidiShortEventInternal(DWORD midiEvent, bool sendMidiOut);
+	void _ProcessMidiLongEventInternal(LPMIDIHDR midiHeader, bool sendMidiOut);
 	void MidiOutShortMsgDispatch(DWORD midiEvent);
 	void VarReset(bool = true);
 	void SetKeyPressure(unsigned, unsigned, unsigned char);

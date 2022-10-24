@@ -3,7 +3,6 @@
 
 #include "vstplugin.h"
 #include <sstream>
-#include <deque>
 #include <atlconv.h>
 #include <MidiFile.h>
 #include <ShObjIdl.h>
@@ -22,13 +21,32 @@ struct MyVstEvents
     VstInt32 numEvents;
     VstIntPtr reserved;
     VstEvent* events[1024];
+	VstEvents*ToVstEvents()
+	{
+		return(VstEvents*)this;
+	}
+	bool AddEvent(const VstEvent &ve)
+	{
+		if (numEvents >= ARRAYSIZE(events))
+			return false;
+		vstEventBuffer[numEvents] = ve;
+		events[numEvents] = &vstEventBuffer[numEvents];
+		numEvents++;
+		return true;
+	}
+	void ClearEvents()
+	{
+		numEvents = 0;
+	}
+private:
+	VstEvent vstEventBuffer[1024];
 };
-static std::deque<MyVstEvents> vstEventsQueue;
-static MyVstEvents vstEventsBuffer;
+static MyVstEvents vstEventsQueue, *vstEventsQueueShared = nullptr;
 static CVST_Plugin g_plugin = nullptr;
 static HWND hwndForVst = nullptr;
 static bool editorOpened = false;
 static CVST_Properties props;
+static std::vector<char*>allocPtrs;
 
 bool OnSizeWindow(long width, long height)
 {
@@ -194,53 +212,48 @@ bool VstPlugin::IsPluginWindowShown()
 
 int VstPlugin::SendMidiData(DWORD midiData)
 {
-    if (vstEventsBuffer.numEvents >= ARRAYSIZE(vstEventsBuffer.events))
-        return -1;
-    VstMidiEvent* ve = new VstMidiEvent{};
+	VstEvent veOriginal{};
+	VstMidiEvent* ve = (VstMidiEvent*)&veOriginal;
     ve->type = kVstMidiType;
     ve->byteSize = sizeof(*ve);
     ve->deltaFrames = 0;
     ve->flags = kVstMidiEventIsRealtime;
     memcpy(ve->midiData, &midiData, sizeof(ve->midiData));
-    MyVstEvents& ves = vstEventsBuffer;
-    ves.events[ves.numEvents] = (VstEvent*)ve;
-    ves.numEvents++;
-    //【特别注意】根据SDK文档，调用processReplacing前最多只能调用一次processEvent！
-    CVST_SendEvents(g_plugin, (VstEvents*)&ves);
-    CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
-	delete ve;
-	ves.numEvents = 0;
+	if (!vstEventsQueue.AddEvent(veOriginal))
+	{
+		CVST_SendEvents(g_plugin, vstEventsQueue.ToVstEvents());
+		CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+		vstEventsQueue.ClearEvents();
+		vstEventsQueue.AddEvent(veOriginal);
+	}
     return 0;
 }
 
 int VstPlugin::SendSysExData(LPVOID data, DWORD length)
 {
-    if (vstEventsBuffer.numEvents >= ARRAYSIZE(vstEventsBuffer.events))
-        return -1;
-    VstMidiSysexEvent* ve = new VstMidiSysexEvent{};
+	VstEvent veOriginal{};
+	VstMidiSysexEvent* ve = (VstMidiSysexEvent*)&veOriginal;
     ve->type = kVstSysExType;
     ve->byteSize = sizeof(*ve);
     ve->deltaFrames = 0;
     ve->flags = kVstMidiEventIsRealtime;
     ve->dumpBytes = length;
-    ve->sysexDump = (char*)data;
-    MyVstEvents& ves = vstEventsBuffer;
-    ves.events[ves.numEvents] = (VstEvent*)ve;
-    ves.numEvents++;
-    CVST_SendEvents(g_plugin, (VstEvents*)&ves);
-    CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
-	delete ve;
-	ves.numEvents = 0;
-    return 0;
+	ve->sysexDump = new char[length];
+	allocPtrs.push_back(ve->sysexDump);
+	memcpy(ve->sysexDump, data, length);
+	if (!vstEventsQueue.AddEvent(veOriginal))
+	{
+		CVST_SendEvents(g_plugin, vstEventsQueue.ToVstEvents());
+		CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+		vstEventsQueue.ClearEvents();
+		vstEventsQueue.AddEvent(veOriginal);
+	}
+	return 0;
 }
 
 void VstPlugin::CommitSend()
 {
-    if (vstEventsBuffer.numEvents)
-    {
-        vstEventsQueue.push_back(vstEventsBuffer);
-        vstEventsBuffer.numEvents = 0;
-    }
+	vstEventsQueueShared = &vstEventsQueue;
 }
 
 void VstPlugin::OnIdle()
@@ -465,16 +478,20 @@ void VstPlugin::_Playback()
     {
 		for (int i = 0; i < numInputs; i++)
 			ZeroMemory(pfChannelsIn[i], singleChSamples*sizeof(float));
-        if (vstEventsQueue.size())
-            CVST_SendEvents(g_plugin, (VstEvents*)&vstEventsQueue.front());
+		if (vstEventsQueueShared)
+		{
+			//【特别注意】根据SDK文档，调用processReplacing前最多只能调用一次processEvent！
+			CVST_SendEvents(g_plugin, vstEventsQueue.ToVstEvents());
+			CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), 0);
+			vstEventsQueueShared->ClearEvents();
+			vstEventsQueueShared = nullptr;
+			while (allocPtrs.size())
+			{
+				delete[]allocPtrs.front();
+				allocPtrs.erase(allocPtrs.begin());
+			}
+		}
         CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
-        if (vstEventsQueue.size())
-        {
-            MyVstEvents& ve = vstEventsQueue.front();
-            for (int i = 0; i < ve.numEvents; i++)
-                delete ve.events[i];
-            vstEventsQueue.pop_front();
-        }
         for (size_t i = 0; i < singleChSamples; i++)
         {
             for (int j = 0; j < player.GetChannelCount(); j++)

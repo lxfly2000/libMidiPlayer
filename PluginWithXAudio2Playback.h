@@ -20,6 +20,7 @@ public:
 	virtual void _Playback() = 0;
 	virtual int SendMidiData(DWORD midiData) = 0;
 	virtual int SendSysExData(LPVOID data,DWORD length) = 0;
+	virtual void CommitSend() = 0;
 	//导出Wav，成功返回0，失败返回-1，不支持返回-2
 	virtual int ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID extraInfo = NULL);
 protected:
