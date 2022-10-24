@@ -15,17 +15,29 @@
 #define VDEFAULT_BUFFER_LENGTH	20
 
 
+#ifdef _M_AMD64
+typedef struct VstEvent64
+{
+	VstInt32 type;
+	VstInt32 byteSize;
+	VstInt32 deltaFrames;
+	VstInt32 flags;
+	char data[28];
+}VstEventArchDep;
+#else
+typedef VstEvent VstEventArchDep;
+#endif
 
 struct MyVstEvents
 {
     VstInt32 numEvents;
     VstIntPtr reserved;
-    VstEvent* events[1024];
+	VstEventArchDep* events[1024];
 	VstEvents*ToVstEvents()
 	{
 		return(VstEvents*)this;
 	}
-	bool AddEvent(const VstEvent &ve)
+	bool AddEvent(const VstEventArchDep &ve)
 	{
 		if (numEvents >= ARRAYSIZE(events))
 			return false;
@@ -39,7 +51,7 @@ struct MyVstEvents
 		numEvents = 0;
 	}
 private:
-	VstEvent vstEventBuffer[1024];
+	VstEventArchDep vstEventBuffer[1024];
 };
 static MyVstEvents vstEventsQueue, *vstEventsQueueShared = nullptr;
 static CVST_Plugin g_plugin = nullptr;
@@ -212,7 +224,7 @@ bool VstPlugin::IsPluginWindowShown()
 
 int VstPlugin::SendMidiData(DWORD midiData)
 {
-	VstEvent veOriginal{};
+	VstEventArchDep veOriginal{};
 	VstMidiEvent* ve = (VstMidiEvent*)&veOriginal;
     ve->type = kVstMidiType;
     ve->byteSize = sizeof(*ve);
@@ -231,7 +243,7 @@ int VstPlugin::SendMidiData(DWORD midiData)
 
 int VstPlugin::SendSysExData(LPVOID data, DWORD length)
 {
-	VstEvent veOriginal{};
+	VstEventArchDep veOriginal{};
 	VstMidiSysexEvent* ve = (VstMidiSysexEvent*)&veOriginal;
     ve->type = kVstSysExType;
     ve->byteSize = sizeof(*ve);
@@ -398,7 +410,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
                     vexs->flags = kVstMidiEventIsRealtime;
                     vexs->dumpBytes = mf[0][cursorNEvent].size();
                     vexs->sysexDump = (char*)mf[0][cursorNEvent].data();
-                    mve.events[mve.numEvents] = (VstEvent*)vexs;
+                    mve.events[mve.numEvents] = (VstEventArchDep*)vexs;
                     mve.numEvents++;
                 }
             }
@@ -412,7 +424,7 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
                     vms->deltaFrames = (int)eventSamples[cursorNEvent] % smpsPerBuffer;
                     vms->flags = kVstMidiEventIsRealtime;
                     memcpy(vms->midiData, mf[0][cursorNEvent].data(), sizeof(vms->midiData));
-                    mve.events[mve.numEvents] = (VstEvent*)vms;
+                    mve.events[mve.numEvents] = (VstEventArchDep*)vms;
                     mve.numEvents++;
                 }
             }
