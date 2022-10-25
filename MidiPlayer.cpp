@@ -61,7 +61,7 @@ MidiPlayer::~MidiPlayer()
 {
 	Stop();
 	Unload();
-	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+	if (pluginPlayer)
 	{
 		pluginPlayer->StopPlayback();
 		pluginPlayer->ReleasePlugin();
@@ -82,7 +82,7 @@ MidiPlayer::~MidiPlayer()
 
 void MidiPlayer::MidiOutShortMsgDispatch(DWORD midiEvent)
 {
-	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+	if (pluginPlayer)
 		pluginPlayer->SendMidiData(midiEvent);
 	else
 		midiOutShortMsg(hMidiOut, midiEvent);
@@ -224,7 +224,7 @@ void MidiPlayer::Panic(unsigned channel, bool resetkeyboard)
 	for (int i = 0; i < ARRAYSIZE(cmds); i++)
 	{
 		int midiData = cmds[i] | (channel & 0xF);
-		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		if (pluginPlayer)
 		{
 			pluginPlayer->SendMidiData(midiData);
 		}
@@ -244,7 +244,7 @@ void MidiPlayer::PanicAllChannel(bool resetkeyboard)
 {
 	for (unsigned i = 0; i < nChannels; i++)
 		Panic(i, resetkeyboard);
-	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+	if (pluginPlayer)
 		pluginPlayer->CommitSend();
 }
 
@@ -255,7 +255,7 @@ void MidiPlayer::Stop(bool bResetMidi)
 	dropEventsCount = 0;
 	if (bResetMidi)
 	{
-		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		if (pluginPlayer)
 		{
 			/* HOW TO DO THIS??? */
 		}
@@ -295,7 +295,7 @@ bool MidiPlayer::SetLoop(float posStart, float posEnd, bool includeLeft, bool in
 
 void MidiPlayer::SetVolume(unsigned v)
 {
-	if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+	if (pluginPlayer)
 	{
 		pluginPlayer->SetVolume(v / 100.0f);
 	}
@@ -381,7 +381,7 @@ void MidiPlayer::_TimerFunc(UINT wTimerID, UINT msg, DWORD_PTR dwUser, DWORD_PTR
 			if (++nEvent >= nEventCount)
 				break;
 		}
-		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		if (pluginPlayer)
 			((VstPlugin*)pluginPlayer)->CommitSend();
 	}
 	if (loopEndTick)
@@ -616,7 +616,7 @@ void MidiPlayer::_ProcessMidiLongEventInternal(LPMIDIHDR midiHeader, bool sendMi
 		pFuncOnSysEx((BYTE*)midiHeader->lpData, midiHeader->dwBufferLength);
 	if (sendMidiOut)
 	{
-		if (GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		if (pluginPlayer)
 		{
 			pluginPlayer->SendSysExData(midiHeader->lpData, midiHeader->dwBufferLength);
 		}
@@ -632,14 +632,14 @@ void MidiPlayer::_ProcessMidiLongEventInternal(LPMIDIHDR midiHeader, bool sendMi
 void MidiPlayer::_ProcessMidiShortEvent(DWORD midiEvent, bool sendMidiOut)
 {
 	_ProcessMidiShortEventInternal(midiEvent, sendMidiOut);
-	if (sendMidiOut&&GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+	if (sendMidiOut&&pluginPlayer)
 		((VstPlugin*)pluginPlayer)->CommitSend();
 }
 
 void MidiPlayer::_ProcessMidiLongEvent(LPMIDIHDR midiHeader, bool sendMidiOut)
 {
 	_ProcessMidiLongEventInternal(midiHeader, sendMidiOut);
-	if (sendMidiOut&&GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+	if (sendMidiOut&&pluginPlayer)
 		((VstPlugin*)pluginPlayer)->CommitSend();
 }
 
