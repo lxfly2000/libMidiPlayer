@@ -98,7 +98,9 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
 {
     USES_CONVERSION;
     CVST_Init(vstHostCallback);
-    g_plugin = CVST_LoadPlugin(T2A(path), nullptr);
+	char utf8path[MAX_PATH];
+	WideCharToMultiByte(CP_UTF8, 0, path, lstrlen(path), utf8path, sizeof(utf8path), NULL, NULL);
+    g_plugin = CVST_LoadPlugin(utf8path, nullptr);
 	if (!g_plugin)
 		return -1;
 
