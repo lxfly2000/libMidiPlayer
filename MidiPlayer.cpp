@@ -648,7 +648,7 @@ UINT MidiPlayer::GetDeviceID()
 	return deviceID;
 }
 
-PluginWithXAudio2Playback* MidiPlayer::GetPlugin()
+PluginWithWavePlayback* MidiPlayer::GetPlugin()
 {
 	return pluginPlayer;
 }

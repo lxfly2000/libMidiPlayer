@@ -47,6 +47,11 @@ void WINAPI XASCallback::OnVoiceProcessingPassStart(UINT32)
 }
 
 
+void XAudio2Player::GetClass(char *buf, int n)
+{
+	lstrcpynA(buf, "XAudio2Player", n);
+}
+
 int XAudio2Player::Init(int nChannel, int sampleRate, int bytesPerVar)
 {
 	m_channels = nChannel;
@@ -98,6 +103,7 @@ void XAudio2Player::Play(BYTE* buf, int length)
 	xbuffer.pAudioData = buf;
 	xbuffer.AudioBytes = length;
 	sourceVoice->SubmitSourceBuffer(&xbuffer);
+	WaitForBufferEndEvent();
 }
 
 void XAudio2Player::SetVolume(float v)
@@ -136,6 +142,11 @@ int XAudio2Player::GetSampleRate()
 int XAudio2Player::GetBytesPerVar()
 {
 	return m_bytesPerVar;
+}
+
+int XAudio2Player::GetBufferTimeMS()
+{
+	return GetPrivateProfileInt(TEXT("XAudio2"), TEXT("BufferTime"), 20, TEXT(".\\VisualMIDIPlayer.ini"));
 }
 
 int XAudio2Player::SetPlaybackSpeed(float speed)

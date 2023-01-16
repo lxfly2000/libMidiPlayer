@@ -1,7 +1,7 @@
 #pragma once
-#include "PluginWithXAudio2Playback.h"
+#include "PluginWithWavePlayback.h"
 #include <vector>
-class VstPlugin :public PluginWithXAudio2Playback
+class VstPlugin :public PluginWithWavePlayback
 {
 public:
 	int LoadPlugin(LPCTSTR path, int smpRate = 44100)override;

@@ -7,12 +7,10 @@
 #include <MidiFile.h>
 #include <ShObjIdl.h>
 #include <atlmem.h>
+#include <mmreg.h>
 
 #include "SDKWaveFile.h"
 #include "CVSTHost/source/CVSTHost.h"
-
-#define KEYNAME_BUFFER_LENGTH	"BufferTime"
-#define VDEFAULT_BUFFER_LENGTH	20
 
 
 #ifdef _M_AMD64
@@ -158,18 +156,23 @@ int VstPlugin::LoadPlugin(LPCTSTR path,int smpRate)
     RegisterClassEx(&wcex);
     DWORD style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, exStyle = WS_EX_TOPMOST|WS_EX_TOOLWINDOW;
     AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+	char playbackClass[32];
+	player->GetClass(playbackClass, ARRAYSIZE(playbackClass));
+	lstrcatA(effname, " (");
+	lstrcatA(effname, playbackClass);
+	lstrcatA(effname, ")");
     hwndForVst = CreateWindowEx(exStyle, wcex.lpszClassName, A2W(effname), style, CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, NULL, NULL);
     SetWindowLongPtr(hwndForVst, GWLP_USERDATA, (LONG_PTR)this);
 
-    buffer_time_ms = GetPrivateProfileInt(TEXT("XAudio2"), TEXT(KEYNAME_BUFFER_LENGTH), VDEFAULT_BUFFER_LENGTH, TEXT(".\\VisualMIDIPlayer.ini"));
-    bytesof_soundBuffer = player.GetSampleRate() * player.GetChannelCount() * player.GetBytesPerVar() * buffer_time_ms / 1000;
-    ATLASSERT(player.GetBytesPerVar() == 2);//因为下面要用short类型，必须得确认这里是2
+	buffer_time_ms = player->GetBufferTimeMS();
+    bytesof_soundBuffer = player->GetSampleRate() * player->GetChannelCount() * player->GetBytesPerVar() * buffer_time_ms / 1000;
+    ATLASSERT(player->GetBytesPerVar() == 2);//因为下面要用short类型，必须得确认这里是2
     buffer = reinterpret_cast<short*>(new BYTE[bytesof_soundBuffer]);
 
-    singleChSamples = player.GetSampleRate() * buffer_time_ms / 1000;
-    numInputs = max(player.GetChannelCount(), props.numInputs);
-    numOutputs = max(player.GetChannelCount(), props.numOutputs);//通道数必须至少为该参数的数值，否则极有可能报错
+    singleChSamples = player->GetSampleRate() * buffer_time_ms / 1000;
+    numInputs = max(player->GetChannelCount(), props.numInputs);
+    numOutputs = max(player->GetChannelCount(), props.numOutputs);//通道数必须至少为该参数的数值，否则极有可能报错
     for (int i = 0; i < numInputs; i++)
         pfChannelsIn.push_back(new float[singleChSamples]);
     for (int i = 0; i < numOutputs; i++)
@@ -347,10 +350,10 @@ int VstPlugin::ExportToWav(LPCTSTR midiFilePath, LPCTSTR wavFilePath, LPVOID ext
     CWaveFile waveFile;
     WAVEFORMATEX wfex = {
         WAVE_FORMAT_IEEE_FLOAT,//audioFormat
-        (WORD)player.GetChannelCount(),//numChannels
+        (WORD)player->GetChannelCount(),//numChannels
         sampleRate,//sampleRate
-        sampleRate* player.GetChannelCount() * bytesPerVar,//byteRate
-        (WORD)(player.GetChannelCount() * bytesPerVar),//blockAlign
+        sampleRate* player->GetChannelCount() * bytesPerVar,//byteRate
+        (WORD)(player->GetChannelCount() * bytesPerVar),//blockAlign
         (WORD)(bytesPerVar * 8),//bpsample
         (WORD)0//cbSize
     };
@@ -508,13 +511,12 @@ void VstPlugin::_Playback()
         CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
         for (size_t i = 0; i < singleChSamples; i++)
         {
-            for (int j = 0; j < player.GetChannelCount(); j++)
+            for (int j = 0; j < player->GetChannelCount(); j++)
             {
                 //某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
-                buffer[player.GetChannelCount() * i + j] = (short)(min(max(-32768.f, pfChannelsOut[j][i] * 32767.f), 32767.f));
+                buffer[player->GetChannelCount() * i + j] = (short)(min(max(-32768.f, pfChannelsOut[j][i] * 32767.f), 32767.f));
             }
         }
-        player.Play((BYTE*)buffer, bytesof_soundBuffer);
-        player.WaitForBufferEndEvent();
+        player->Play((BYTE*)buffer, bytesof_soundBuffer);
     }
 }

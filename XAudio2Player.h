@@ -1,6 +1,7 @@
 #pragma once
 
-#include "XAudio2_8/Include/um/xaudio2.h"
+#include "WavePlayerBase.h"
+#include <xaudio2.h>
 
 class XASCallback :public IXAudio2VoiceCallback
 {
@@ -18,25 +19,27 @@ public:
 };
 
 
-class XAudio2Player
+class XAudio2Player:public WavePlayerBase
 {
 public:
+	virtual void GetClass(char *, int);
 	//bytesPerVar:指的是一个采样点的一个通道占字节数
-	int Init(int nChannel, int sampleRate, int bytesPerVar);
-	void Release();
-	void Play(BYTE* buf, int length);
+	virtual int Init(int nChannel, int sampleRate, int bytesPerVar);
+	virtual void Release();
+	virtual void Play(BYTE* buf, int length);
 	//取值范围为[0,1]
-	void SetVolume(float v);
+	virtual void SetVolume(float v);
 	//取值范围为[0,1]
-	float GetVolume();
+	virtual float GetVolume();
 	//1为原速
-	int SetPlaybackSpeed(float);
-	int GetQueuedBuffersNum();
-	void WaitForBufferEndEvent();
-	int GetChannelCount();
-	int GetSampleRate();
+	virtual int SetPlaybackSpeed(float);
+	virtual int GetQueuedBuffersNum();
+	virtual void WaitForBufferEndEvent();
+	virtual int GetChannelCount();
+	virtual int GetSampleRate();
 	//指的是一个采样点的一个通道占字节数
-	int GetBytesPerVar();
+	virtual int GetBytesPerVar();
+	virtual int GetBufferTimeMS();
 private:
 	IXAudio2* xAudio2Engine;
 	IXAudio2MasteringVoice* masterVoice;

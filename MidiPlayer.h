@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include"MidiFile.h"
-#include"PluginWithXAudio2Playback.h"
+#include"PluginWithWavePlayback.h"
 #include<Windows.h>
 #include<sstream>
 #include<list>
@@ -167,7 +167,7 @@ public:
 	//MIDI_DEVICE_USE_VST_PLUGIN(-3)：使用VST插件
 	//MIDI_DEVICE_USE_SOUNDFONT2(-4)：使用SF2文件
 	UINT GetDeviceID();
-	PluginWithXAudio2Playback* GetPlugin();
+	PluginWithWavePlayback* GetPlugin();
 	//返回0表示加载成功，-1为失败
 	int GetInitResult();
 	//当使用VST插件时，导出到WAV音频文件（仅32位浮点48KHz格式）
@@ -225,5 +225,5 @@ private:
 	UINT deviceID;
 	int initResult;
 
-	PluginWithXAudio2Playback* pluginPlayer;
+	PluginWithWavePlayback* pluginPlayer;
 };

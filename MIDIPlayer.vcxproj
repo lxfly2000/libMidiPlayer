@@ -169,18 +169,21 @@
   <ItemGroup>
     <ClCompile Include="CVSTHost\source\win32\CVSTHost.cpp" />
     <ClCompile Include="CVSTHost\source\win32\unicodestuff.cpp" />
+    <ClCompile Include="DSoundPlayer.cpp" />
     <ClCompile Include="MidiPlayer.cpp" />
-    <ClCompile Include="PluginWithXAudio2Playback.cpp" />
+    <ClCompile Include="PluginWithWavePlayback.cpp" />
     <ClCompile Include="SDKwavefile.cpp" />
     <ClCompile Include="vstplugin.cpp" />
     <ClCompile Include="XAudio2Player.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DSoundPlayer.h" />
     <ClInclude Include="MidiPlayer.h" />
-    <ClInclude Include="PluginWithXAudio2Playback.h" />
+    <ClInclude Include="PluginWithWavePlayback.h" />
     <ClInclude Include="SDKwavefile.h" />
     <ClInclude Include="SF2Plugin.h" />
     <ClInclude Include="vstplugin.h" />
+    <ClInclude Include="WavePlayerBase.h" />
     <ClInclude Include="XAudio2Player.h" />
   </ItemGroup>
   <ItemGroup>

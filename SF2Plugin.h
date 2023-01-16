@@ -1,6 +1,6 @@
 #pragma once
-#include "PluginWithXAudio2Playback.h"
-class SF2Plugin:public PluginWithXAudio2Playback
+#include "PluginWithWavePlayback.h"
+class SF2Plugin:public PluginWithWavePlayback
 {
 	//TODO：准备采用 FluidSynth...
 };

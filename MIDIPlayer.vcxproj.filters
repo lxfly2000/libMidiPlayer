@@ -24,9 +24,6 @@
     <ClCompile Include="vstplugin.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="PluginWithXAudio2Playback.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="SDKwavefile.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -34,6 +31,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CVSTHost\source\win32\unicodestuff.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PluginWithWavePlayback.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DSoundPlayer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,13 +50,19 @@
     <ClInclude Include="XAudio2Player.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="PluginWithXAudio2Playback.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="SF2Plugin.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="SDKwavefile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginWithWavePlayback.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="WavePlayerBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DSoundPlayer.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
