@@ -7,7 +7,7 @@ public:
 	//bytesPerVar:指的是一个采样点的一个通道占字节数
 	virtual int Init(int nChannel, int sampleRate, int bytesPerVar) = 0;
 	virtual void Release() = 0;
-	virtual void Play(BYTE* buf, int length) = 0;
+	virtual void Play(BYTE* buf, int length, int smpPerCh, int channels, float**sndData) = 0;
 	//取值范围为[0,1]
 	virtual void SetVolume(float v) = 0;
 	//取值范围为[0,1]

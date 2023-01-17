@@ -509,14 +509,6 @@ void VstPlugin::_Playback()
 			}
 		}
         CVST_ProcessReplacing(g_plugin, pfChannelsIn.data(), pfChannelsOut.data(), singleChSamples);
-        for (size_t i = 0; i < singleChSamples; i++)
-        {
-            for (int j = 0; j < player->GetChannelCount(); j++)
-            {
-                //某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
-                buffer[player->GetChannelCount() * i + j] = (short)(min(max(-32768.f, pfChannelsOut[j][i] * 32767.f), 32767.f));
-            }
-        }
-        player->Play((BYTE*)buffer, bytesof_soundBuffer);
+		player->Play((BYTE*)buffer, bytesof_soundBuffer, singleChSamples, player->GetChannelCount(), pfChannelsOut.data());
     }
 }

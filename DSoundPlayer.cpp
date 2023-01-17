@@ -1,4 +1,5 @@
 #include "DSoundPlayer.h"
+#include "common.h"
 #include <dsound.h>
 
 #pragma comment(lib,"dsound.lib")
@@ -9,7 +10,6 @@
 #define KEYNAME_BUFFER_LENGTH "DSoundBufferTime"
 #define VDEFAULT_NOTIFY_COUNT 4
 #define VDEFAULT_BUFFER_LENGTH 50
-#define PROFILE_NAME ".\\VisualMIDIPlayer.ini"
 
 #ifdef _DEBUG
 #define C(e) if(e)\
@@ -30,7 +30,7 @@ WAVEFORMATEX w{};
 
 void DSoundPlayer::GetClass(char *buf, int n)
 {
-	lstrcpynA(buf, "DSoundPlayer", n);
+	lstrcpynA(buf, "DSound", n);
 }
 
 int DSoundPlayer::Init(int nChannel, int sampleRate, int bytesPerVar)
@@ -43,7 +43,7 @@ int DSoundPlayer::Init(int nChannel, int sampleRate, int bytesPerVar)
 	w.wBitsPerSample = bytesPerVar * 8;
 	w.cbSize = 0;
 
-	int notify_count = GetPrivateProfileInt(TEXT(SECTION_NAME), TEXT(KEYNAME_NOTIFY_COUNT), VDEFAULT_NOTIFY_COUNT, TEXT(PROFILE_NAME));
+	int notify_count = GetPrivateProfileInt(TEXT(SECTION_NAME), TEXT(KEYNAME_NOTIFY_COUNT), VDEFAULT_NOTIFY_COUNT, GetProfilePath());
 	int buffer_time_ms = GetBufferTimeMS();
 	int bytesof_soundbuffer = sampleRate * bytesPerVar*nChannel*buffer_time_ms / 1000;//onebufbyte
 	m_bufbytes = bytesof_soundbuffer * notify_count;
@@ -63,11 +63,13 @@ int DSoundPlayer::Init(int nChannel, int sampleRate, int bytesPerVar)
 	}
 	C(pNotify->SetNotificationPositions(notify_count, dpn));
 	delete[]dpn;
+	C(pBuffer->Play(0, 0, DSBPLAY_LOOPING));
 	return 0;
 }
 
 void DSoundPlayer::Release()
 {
+	C(pBuffer->Stop());
 	CloseHandle(hBufferEndEvent);
 	pNotify->Release();
 	pBuffer->Release();
@@ -78,13 +80,19 @@ void DSoundPlayer::Release()
 	pDirectSound = nullptr;
 }
 
-void DSoundPlayer::Play(BYTE * buf, int length)
+void DSoundPlayer::Play(BYTE* buf, int length, int smpPerCh, int channels, float**sndData)
 {
 	C(pBuffer->Lock(writecursor, length, &pLockedBuffer, &lockedBufferBytes, NULL, NULL, NULL));
-	memcpy(pLockedBuffer, buf, length);
+	for (int i = 0; i < smpPerCh; i++)
+	{
+		for (int j = 0; j < channels; j++)
+		{
+			//某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
+			((short*)pLockedBuffer)[channels * i + j] = (short)(min(max(-32768.f, sndData[j][i] * 32767.f), 32767.f));
+		}
+	}
 	C(pBuffer->Unlock(pLockedBuffer, lockedBufferBytes, NULL, NULL));
 	writecursor = (writecursor + lockedBufferBytes) % m_bufbytes;
-	C(pBuffer->Play(0, 0, DSBPLAY_LOOPING));
 	WaitForBufferEndEvent();
 }
 
@@ -135,5 +143,5 @@ int DSoundPlayer::GetBytesPerVar()
 
 int DSoundPlayer::GetBufferTimeMS()
 {
-	return GetPrivateProfileInt(TEXT(SECTION_NAME), TEXT(KEYNAME_BUFFER_LENGTH), VDEFAULT_BUFFER_LENGTH, TEXT(".\\VisualMIDIPlayer.ini"));
+	return GetPrivateProfileInt(TEXT(SECTION_NAME), TEXT(KEYNAME_BUFFER_LENGTH), VDEFAULT_BUFFER_LENGTH, GetProfilePath());
 }

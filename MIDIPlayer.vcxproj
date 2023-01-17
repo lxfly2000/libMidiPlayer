@@ -167,6 +167,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="common.cpp" />
     <ClCompile Include="CVSTHost\source\win32\CVSTHost.cpp" />
     <ClCompile Include="CVSTHost\source\win32\unicodestuff.cpp" />
     <ClCompile Include="DSoundPlayer.cpp" />
@@ -177,6 +178,7 @@
     <ClCompile Include="XAudio2Player.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="common.h" />
     <ClInclude Include="DSoundPlayer.h" />
     <ClInclude Include="MidiPlayer.h" />
     <ClInclude Include="PluginWithWavePlayback.h" />

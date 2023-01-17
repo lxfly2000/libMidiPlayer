@@ -1,5 +1,9 @@
 #include "XAudio2Player.h"
+#include "common.h"
 
+#define SECTION_NAME "XAudio2"
+#define KEYNAME_BUFFER_TIME "BufferTime"
+#define VDEFAULT_BUFFER_TIME 20
 
 XASCallback::XASCallback()
 {
@@ -49,11 +53,13 @@ void WINAPI XASCallback::OnVoiceProcessingPassStart(UINT32)
 
 void XAudio2Player::GetClass(char *buf, int n)
 {
-	lstrcpynA(buf, "XAudio2Player", n);
+	lstrcpynA(buf, "XAudio2", n);
 }
 
 int XAudio2Player::Init(int nChannel, int sampleRate, int bytesPerVar)
 {
+	if (GetPrivateProfileInt(TEXT(SECTION_NAME), TEXT("Disabled"), 0, GetProfilePath()))
+		return -1;
 	m_channels = nChannel;
 	m_sampleRate = sampleRate;
 	m_bytesPerVar = bytesPerVar;
@@ -98,8 +104,16 @@ void XAudio2Player::Release()
 	//CoUninitialize();
 }
 
-void XAudio2Player::Play(BYTE* buf, int length)
+void XAudio2Player::Play(BYTE* buf, int length, int smpPerCh, int channels, float**sndData)
 {
+	for (int i = 0; i < smpPerCh; i++)
+	{
+		for (int j = 0; j < channels; j++)
+		{
+			//某些做得比较糙的插件会出现数值在[-1,1]范围以外的情况，注意限定范围
+			((short*)buf)[channels * i + j] = (short)(min(max(-32768.f, sndData[j][i] * 32767.f), 32767.f));
+		}
+	}
 	xbuffer.pAudioData = buf;
 	xbuffer.AudioBytes = length;
 	sourceVoice->SubmitSourceBuffer(&xbuffer);
@@ -146,7 +160,7 @@ int XAudio2Player::GetBytesPerVar()
 
 int XAudio2Player::GetBufferTimeMS()
 {
-	return GetPrivateProfileInt(TEXT("XAudio2"), TEXT("BufferTime"), 20, TEXT(".\\VisualMIDIPlayer.ini"));
+	return GetPrivateProfileInt(TEXT(SECTION_NAME), TEXT(KEYNAME_BUFFER_TIME), VDEFAULT_BUFFER_TIME, GetProfilePath());
 }
 
 int XAudio2Player::SetPlaybackSpeed(float speed)
